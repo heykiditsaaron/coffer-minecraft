@@ -1,6 +1,6 @@
 # ADAPTER CONTRACT — CORE ↔ PLATFORM
 ## BINDING AND AUTHORITATIVE
-Version: 1.1
+Version: 1.2
 
 ---
 
@@ -48,6 +48,28 @@ Adapters MUST NOT:
 - flatten identity,
 - strip meaning,
 - invent value.
+
+---
+
+### 1.1 Composite Truth / Aggregation Obligation
+
+Adapters MUST NOT collapse mixed platform reality into an all-or-nothing declaration
+for convenience.
+
+When an invocation involves multiple independent elements (items, stacks, quantities,
+metadata-bearing variants, permissions, or other platform facts), the adapter MUST:
+
+- determine which elements can be declared truthfully,
+- determine which elements cannot be declared truthfully,
+- and refuse to invent or flatten that distinction.
+
+If no truthful exchange can be declared, the adapter MUST refuse explicitly and MUST
+NOT invoke Core evaluation.
+
+This obligation is platform-agnostic.
+It does not mandate any specific UX, batching model, or execution surface.
+It exists to ensure adapters carry the burden of truthful aggregation so the Core
+may remain singular, deterministic, and non-negotiating.
 
 ---
 
@@ -181,7 +203,8 @@ Adapters MUST NOT:
 - assume item equivalence,
 - hide uncertainty,
 - introduce side effects into policy layers,
-- encode platform logic into Core types.
+- encode platform logic into Core types,
+- flatten mixed reality into a single dishonest declaration.
 
 Any such behavior is a contract violation.
 

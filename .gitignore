@@ -36,3 +36,5 @@ run/
 # Fabric run directory
 src/adapter-fabric/run/
 
+
+coffer-minecraft.code-workspace
