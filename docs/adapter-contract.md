@@ -1,5 +1,6 @@
 # ADAPTER CONTRACT — CORE ↔ PLATFORM
 ## BINDING AND AUTHORITATIVE
+Version: 1.1
 
 ---
 
@@ -84,6 +85,20 @@ Adapters MUST NOT:
 - approximate value,
 - “best effort” valuation,
 - silently ignore uncertainty.
+
+---
+
+### 3.1 Valuation Absence Invariant
+
+Adapters MUST remain operational when no valuation rules are declared.
+
+In the absence of declared valuation truth:
+- All economic actions MUST be evaluated
+- Valuation MUST reject all items
+- Core MUST deny the exchange with `INVALID_VALUE`
+- No default, inferred, or placeholder values may be applied
+
+An undeclared economy is valid and intentionally inert.
 
 ---
 
