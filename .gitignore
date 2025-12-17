@@ -1,0 +1,33 @@
+# =========================
+# Gradle
+# =========================
+.gradle/
+build/
+
+# Gradle wrapper binaries are committed
+!gradlew
+!gradlew.bat
+!gradle/wrapper/
+
+# =========================
+# Java
+# =========================
+*.class
+*.jar
+*.war
+*.ear
+
+# =========================
+# IDEs
+# =========================
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# =========================
+# OS / Misc
+# =========================
+.DS_Store
+Thumbs.db

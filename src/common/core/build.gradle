@@ -1,0 +1,14 @@
+plugins {
+    id "java-library"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencies {
+    // Core is sovereign.
+    // No dependencies allowed.
+}

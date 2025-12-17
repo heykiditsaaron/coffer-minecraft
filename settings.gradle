@@ -1,0 +1,5 @@
+rootProject.name = "coffer"
+
+// Declare subprojects explicitly.
+// Structure is authority.
+include("src:common:core")
