@@ -5,17 +5,12 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * IN-MEMORY BALANCE STORE (PHASE 3B.3).
+ * IN-MEMORY BALANCE STORE
  *
- * This store is:
- * - volatile
- * - non-persistent
+ * Phase 3B:
  * - adapter-owned
- *
- * It exists solely to prove mutation execution.
- *
- * DO NOT assume durability.
- * DO NOT assume restart survival.
+ * - non-persistent
+ * - mutation only after Core PASS
  */
 public final class InMemoryBalanceStore {
 

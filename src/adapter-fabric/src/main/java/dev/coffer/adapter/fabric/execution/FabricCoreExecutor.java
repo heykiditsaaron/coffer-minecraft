@@ -8,37 +8,27 @@ import dev.coffer.core.ExchangeRequest;
 import java.util.Objects;
 
 /**
- * FABRIC CORE EXECUTOR (PHASE 3B.2).
+ * FABRIC CORE EXECUTOR
  *
- * This class is responsible for:
- * - invoking the CoreEngine
- * - returning the Core result unchanged
- *
- * This class does NOT:
- * - interpret results
- * - apply mutations
- * - emit audits
- * - perform permission checks
- *
- * It is a thin execution bridge.
+ * Contract-aligned:
+ * - translates adapter request to opaque Core ExchangeRequest
+ * - invokes CoreEngine
+ * - returns result without interpretation
  */
 public final class FabricCoreExecutor {
 
     private final CoreEngine coreEngine;
 
     public FabricCoreExecutor(CoreEngine coreEngine) {
-        this.coreEngine = Objects.requireNonNull(coreEngine, "coreEngine must be non-null");
+        this.coreEngine = Objects.requireNonNull(coreEngine, "coreEngine");
     }
 
-    /**
-     * Execute a declared exchange request through the Core.
-     */
     public ExchangeEvaluationResult execute(DeclaredExchangeRequest declaredRequest) {
-        Objects.requireNonNull(declaredRequest, "declaredRequest must be non-null");
+        Objects.requireNonNull(declaredRequest, "declaredRequest");
 
-        ExchangeRequest coreRequest =
+        ExchangeRequest request =
                 FabricToCoreTranslator.translate(declaredRequest);
 
-        return coreEngine.evaluate(coreRequest);
+        return coreEngine.evaluate(request);
     }
 }
