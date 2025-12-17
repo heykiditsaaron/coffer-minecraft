@@ -3,18 +3,19 @@ package dev.coffer.adapter.fabric;
 import dev.coffer.adapter.fabric.command.CofferCommandRegistrar;
 import dev.coffer.adapter.fabric.command.ShopCommandRegistrar;
 import dev.coffer.adapter.fabric.command.SellCommandRegistrar;
+import dev.coffer.adapter.fabric.execution.FabricAuditSink;
+import dev.coffer.adapter.fabric.execution.FabricCoreExecutor;
+import dev.coffer.adapter.fabric.execution.FabricPolicyAllowAll;
+import dev.coffer.adapter.fabric.execution.FabricValuationServiceStub;
+import dev.coffer.core.CoreEngine;
+import dev.coffer.core.PolicyLayer;
+import dev.coffer.core.ValuationService;
 import net.fabricmc.api.DedicatedServerModInitializer;
 
+import java.util.List;
+
 /**
- * FABRIC ADAPTER — SERVER ENTRYPOINT (PHASE 3.A–3.E).
- *
- * - Server-side only.
- * - Creates the single adapter runtime door.
- * - Registers diagnostic command surfaces.
- *
- * No Core evaluation occurs here.
- * No UI is opened here.
- * No mutation occurs here.
+ * FABRIC ADAPTER — SERVER ENTRYPOINT (PHASE 3B)
  */
 public final class CofferFabricEntrypoint implements DedicatedServerModInitializer {
 
@@ -24,21 +25,27 @@ public final class CofferFabricEntrypoint implements DedicatedServerModInitializ
         runtime.markInitializing();
 
         try {
-            // Phase 3.C: Base diagnostic command
+            List<PolicyLayer> policyLayers = List.of(new FabricPolicyAllowAll());
+            ValuationService valuationService = new FabricValuationServiceStub();
+            FabricAuditSink auditSink = new FabricAuditSink();
+
+            CoreEngine coreEngine =
+                    new CoreEngine(policyLayers, valuationService, auditSink);
+
+            FabricCoreExecutor executor = new FabricCoreExecutor(coreEngine);
+
             CofferCommandRegistrar.register();
-
-            // Phase 3.D: Diagnostic shop access command
             ShopCommandRegistrar.register();
-
-            // Phase 3.E: Diagnostic sell / bulk liquidation entry
-            SellCommandRegistrar.register();
+            SellCommandRegistrar.register(executor);
 
             runtime.markReady();
         } catch (Throwable t) {
-            runtime.markFailed(CofferFabricRefusal.of(
-                    "ADAPTER_BOOT_FAILURE",
-                    "Coffer failed to initialize (server entrypoint)."
-            ));
+            runtime.markFailed(
+                    CofferFabricRefusal.of(
+                            "ADAPTER_BOOT_FAILURE",
+                            "Coffer failed to initialize economic execution."
+                    )
+            );
         }
     }
 }

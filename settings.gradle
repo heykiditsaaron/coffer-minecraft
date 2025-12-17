@@ -1,5 +1,16 @@
+pluginManagement {
+    repositories {
+        maven {
+            name = "Fabric"
+            url = "https://maven.fabricmc.net/"
+        }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
 rootProject.name = "coffer"
 
-// Declare subprojects explicitly.
-// Structure is authority.
+// Explicit subprojects
 include("src:common:core")
+include("src:adapter-fabric")
