@@ -12,19 +12,18 @@ import java.util.Objects;
 public final class CoreEngine {
 
     private final List<PolicyLayer> policyLayers;
+    private final ValuationService valuationService;
 
-    public CoreEngine(List<PolicyLayer> policyLayers) {
+    public CoreEngine(
+            List<PolicyLayer> policyLayers,
+            ValuationService valuationService
+    ) {
         this.policyLayers = List.copyOf(
                 Objects.requireNonNull(policyLayers, "policyLayers")
         );
+        this.valuationService = Objects.requireNonNull(valuationService, "valuationService");
     }
 
-    /**
-     * Evaluate an exchange request through all policy layers.
-     *
-     * @param request immutable exchange request
-     * @return final evaluation result
-     */
     public ExchangeEvaluationResult evaluate(ExchangeRequest request) {
         Objects.requireNonNull(request, "request");
 
@@ -38,8 +37,12 @@ public final class CoreEngine {
             }
         }
 
-        // No policy denied.
-        // Valuation snapshot will be added later.
-        return ExchangeEvaluationResult.pass(new Object());
+        ValuationSnapshot snapshot = valuationService.valuate(request);
+
+        if (!snapshot.hasAnyAccepted()) {
+            return ExchangeEvaluationResult.deny(DenialReason.INVALID_VALUE);
+        }
+
+        return ExchangeEvaluationResult.pass(snapshot);
     }
 }
