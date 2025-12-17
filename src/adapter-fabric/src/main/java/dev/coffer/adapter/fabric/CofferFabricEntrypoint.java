@@ -1,16 +1,15 @@
 package dev.coffer.adapter.fabric;
 
+import dev.coffer.adapter.fabric.command.CofferCommandRegistrar;
 import net.fabricmc.api.DedicatedServerModInitializer;
 
 /**
- * FABRIC ADAPTER — SERVER ENTRYPOINT (PHASE 3.A).
+ * FABRIC ADAPTER — SERVER ENTRYPOINT (PHASE 3.A / 3.C).
  *
  * - Server-side only.
  * - Creates the single adapter runtime door.
- * - Establishes explicit operational state transitions.
+ * - Registers diagnostic commands.
  *
- * No commands are registered here.
- * No UI is opened here.
  * No Core evaluation occurs here.
  */
 public final class CofferFabricEntrypoint implements DedicatedServerModInitializer {
@@ -22,10 +21,11 @@ public final class CofferFabricEntrypoint implements DedicatedServerModInitializ
 
         try {
             // Phase 3.A: Bootstrap only.
-            // Future phases will wire Core construction and adapter boundary services here.
+            // Phase 3.C: Register diagnostic command surface.
+            CofferCommandRegistrar.register();
+
             runtime.markReady();
         } catch (Throwable t) {
-            // Explicit refusal, no silent failure.
             runtime.markFailed(CofferFabricRefusal.of(
                     "ADAPTER_BOOT_FAILURE",
                     "Coffer failed to initialize (server entrypoint)."
