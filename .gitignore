@@ -32,3 +32,7 @@ build/
 .DS_Store
 Thumbs.db
 run/
+
+# Fabric run directory
+src/adapter-fabric/run/
+
