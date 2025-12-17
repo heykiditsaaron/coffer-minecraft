@@ -7,7 +7,6 @@ import dev.coffer.adapter.fabric.boundary.ExchangeIntent;
 import dev.coffer.adapter.fabric.boundary.InvocationContext;
 import dev.coffer.adapter.fabric.boundary.MetadataRelevance;
 import dev.coffer.adapter.fabric.execution.FabricCoreExecutor;
-import dev.coffer.adapter.fabric.execution.InMemoryBalanceStore;
 import dev.coffer.core.ExchangeEvaluationResult;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.server.command.CommandManager;
@@ -18,11 +17,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * SELL COMMAND — PHASE 3B
+ * SELL COMMAND — PHASE 3C.1
+ *
+ * This command currently exercises evaluation ONLY.
+ * No mutation is performed until a real inventory-backed
+ * sell flow exists.
  */
 public final class SellCommandRegistrar {
-
-    private static final InMemoryBalanceStore BALANCES = new InMemoryBalanceStore();
 
     private SellCommandRegistrar() {
         // static-only
@@ -45,6 +46,7 @@ public final class SellCommandRegistrar {
 
         UUID playerId = source.getPlayer().getUuid();
 
+        // Placeholder declaration — inventory-backed selection will replace this
         DeclaredExchangeRequest request =
                 new DeclaredExchangeRequest(
                         ExchangeIntent.SELL,
@@ -68,13 +70,9 @@ public final class SellCommandRegistrar {
             return 0;
         }
 
-        // Phase 3B: explicit, in-memory mutation
-        BALANCES.applyDelta(playerId, 1L);
-
+        // Phase 3C.1: evaluation only — no mutation
         source.sendFeedback(
-                () -> Text.literal(
-                        "[Coffer] Sell accepted. Balance: " + BALANCES.getBalance(playerId)
-                ),
+                () -> Text.literal("[Coffer] Sell evaluated successfully."),
                 false
         );
 
