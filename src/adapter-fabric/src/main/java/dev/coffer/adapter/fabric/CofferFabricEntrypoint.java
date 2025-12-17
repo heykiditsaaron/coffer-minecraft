@@ -3,18 +3,13 @@ package dev.coffer.adapter.fabric;
 import dev.coffer.adapter.fabric.command.CofferCommandRegistrar;
 import dev.coffer.adapter.fabric.command.ShopCommandRegistrar;
 import dev.coffer.adapter.fabric.command.SellCommandRegistrar;
+import dev.coffer.core.CoreEngine;
 import net.fabricmc.api.DedicatedServerModInitializer;
 
 /**
- * FABRIC ADAPTER — SERVER ENTRYPOINT (PHASE 3.A–3.E).
+ * FABRIC ADAPTER — SERVER ENTRYPOINT (PHASE 3B).
  *
- * - Server-side only.
- * - Creates the single adapter runtime door.
- * - Registers diagnostic command surfaces.
- *
- * No Core evaluation occurs here.
- * No UI is opened here.
- * No mutation occurs here.
+ * Fabric now executes real economic decisions.
  */
 public final class CofferFabricEntrypoint implements DedicatedServerModInitializer {
 
@@ -24,20 +19,17 @@ public final class CofferFabricEntrypoint implements DedicatedServerModInitializ
         runtime.markInitializing();
 
         try {
-            // Phase 3.C: Base diagnostic command
+            CoreEngine coreEngine = new CoreEngine();
+
             CofferCommandRegistrar.register();
-
-            // Phase 3.D: Diagnostic shop access command
             ShopCommandRegistrar.register();
-
-            // Phase 3.E: Diagnostic sell / bulk liquidation entry
-            SellCommandRegistrar.register();
+            SellCommandRegistrar.register(coreEngine);
 
             runtime.markReady();
         } catch (Throwable t) {
             runtime.markFailed(CofferFabricRefusal.of(
                     "ADAPTER_BOOT_FAILURE",
-                    "Coffer failed to initialize (server entrypoint)."
+                    "Coffer failed to initialize economic execution."
             ));
         }
     }
