@@ -4,9 +4,12 @@ package dev.coffer.core;
  * Performs explicit balance mutations.
  *
  * This service is the ONLY place where balance mutation may occur.
- * It is separate from exchange evaluation by design.
+ * Implementations must emit audit records.
  */
 public interface BalanceMutationService {
 
-    BalanceMutationResult apply(BalanceMutation mutation);
+    BalanceMutationResult apply(
+            BalanceMutation mutation,
+            AuditSink auditSink
+    );
 }
