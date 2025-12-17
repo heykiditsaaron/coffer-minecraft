@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "coffer",
+  "version": "0.0.0-dev",
+  "name": "Coffer",
+  "description": "Coffer Fabric Adapter (Canonical Reference Adapter).",
+  "authors": [
+    "Aaron Faircloth"
+  ],
+  "license": "All Rights Reserved",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "dev.coffer.adapter.fabric.CofferFabricEntrypoint"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.11",
+    "minecraft": "1.21.1",
+    "java": ">=21"
+  }
+}
