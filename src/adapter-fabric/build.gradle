@@ -1,10 +1,7 @@
 plugins {
-    id 'fabric-loom' version '1.7-SNAPSHOT'
+    id 'fabric-loom' version '1.7.4'
     id 'java'
 }
-
-group = 'dev.coffer'
-version = '0.0.0-dev'
 
 java {
     toolchain {
@@ -14,23 +11,23 @@ java {
 
 repositories {
     mavenCentral()
-    maven { url = 'https://maven.fabricmc.net/' }
+    maven {
+        name = "Fabric"
+        url = "https://maven.fabricmc.net/"
+    }
 }
 
 dependencies {
-    // Minecraft & Fabric
     minecraft "com.mojang:minecraft:1.21.1"
     mappings "net.fabricmc:yarn:1.21.1+build.1:v2"
     modImplementation "net.fabricmc:fabric-loader:0.15.11"
     modImplementation "net.fabricmc.fabric-api:fabric-api:0.102.0+1.21.1"
 
-    // Coffer Core
-    implementation project(':src:common:core')
-
+    implementation project(":src:common:core")
 }
 
 loom {
-    serverOnlyMinecraftJar()
+    splitEnvironmentSourceSets()
 }
 
 tasks.withType(JavaCompile).configureEach {
