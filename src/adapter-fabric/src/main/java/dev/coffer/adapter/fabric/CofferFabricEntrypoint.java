@@ -3,10 +3,11 @@ package dev.coffer.adapter.fabric;
 import dev.coffer.adapter.fabric.command.CofferCommandRegistrar;
 import dev.coffer.adapter.fabric.command.ShopCommandRegistrar;
 import dev.coffer.adapter.fabric.command.SellCommandRegistrar;
+import dev.coffer.adapter.fabric.config.ValuationConfig;
 import dev.coffer.adapter.fabric.execution.FabricAuditSink;
 import dev.coffer.adapter.fabric.execution.FabricCoreExecutor;
 import dev.coffer.adapter.fabric.execution.FabricPolicyAllowAll;
-import dev.coffer.adapter.fabric.execution.FabricValuationServiceStub;
+import dev.coffer.adapter.fabric.execution.FabricValuationService;
 import dev.coffer.core.CoreEngine;
 import dev.coffer.core.PolicyLayer;
 import dev.coffer.core.ValuationService;
@@ -26,7 +27,11 @@ public final class CofferFabricEntrypoint implements DedicatedServerModInitializ
 
         try {
             List<PolicyLayer> policyLayers = List.of(new FabricPolicyAllowAll());
-            ValuationService valuationService = new FabricValuationServiceStub();
+
+            // Phase 3C.3 — explicit, deny-by-default valuation
+            ValuationService valuationService =
+                    new FabricValuationService(ValuationConfig.empty());
+
             FabricAuditSink auditSink = new FabricAuditSink();
 
             CoreEngine coreEngine =
