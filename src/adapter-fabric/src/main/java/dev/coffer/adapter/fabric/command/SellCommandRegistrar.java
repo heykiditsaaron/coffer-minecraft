@@ -1,11 +1,7 @@
 package dev.coffer.adapter.fabric.command;
 
 import dev.coffer.adapter.fabric.boundary.DeclaredExchangeRequest;
-import dev.coffer.adapter.fabric.boundary.DeclaredIdentity;
-import dev.coffer.adapter.fabric.boundary.DeclaredItem;
-import dev.coffer.adapter.fabric.boundary.ExchangeIntent;
-import dev.coffer.adapter.fabric.boundary.InvocationContext;
-import dev.coffer.adapter.fabric.boundary.MetadataRelevance;
+import dev.coffer.adapter.fabric.declaration.InventoryDeclarationBuilder;
 import dev.coffer.adapter.fabric.execution.FabricCoreExecutor;
 import dev.coffer.core.ExchangeEvaluationResult;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -13,15 +9,18 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.Optional;
 
 /**
- * SELL COMMAND — PHASE 3C.1
+ * SELL COMMAND — PHASE 3C.2
  *
- * This command currently exercises evaluation ONLY.
- * No mutation is performed until a real inventory-backed
- * sell flow exists.
+ * This command captures player intent and delegates declaration construction.
+ *
+ * Phase 3C.2:
+ * - Inventory-backed declaration is attempted first.
+ * - If no truthful declaration exists, the adapter refuses BEFORE Core invocation.
+ *
+ * Mutation is still not performed in this phase.
  */
 public final class SellCommandRegistrar {
 
@@ -44,23 +43,16 @@ public final class SellCommandRegistrar {
             return 0;
         }
 
-        UUID playerId = source.getPlayer().getUuid();
+        Optional<DeclaredExchangeRequest> maybeRequest =
+                InventoryDeclarationBuilder.fromPlayer(source.getPlayer());
 
-        // Placeholder declaration — inventory-backed selection will replace this
-        DeclaredExchangeRequest request =
-                new DeclaredExchangeRequest(
-                        ExchangeIntent.SELL,
-                        InvocationContext.player(playerId),
-                        DeclaredIdentity.of(playerId),
-                        List.of(
-                                DeclaredItem.withoutMetadata(
-                                        "minecraft:dirt",
-                                        1,
-                                        MetadataRelevance.IGNORED_BY_DECLARATION
-                                )
-                        )
-                );
+        if (maybeRequest.isEmpty()) {
+            // Phase 3C.2: refuse if no truthful exchange declaration exists.
+            source.sendError(Text.literal("[Coffer] Nothing to sell (no owned items eligible)."));
+            return 0;
+        }
 
+        DeclaredExchangeRequest request = maybeRequest.get();
         ExchangeEvaluationResult result = executor.execute(request);
 
         if (!result.allowed()) {
@@ -70,7 +62,7 @@ public final class SellCommandRegistrar {
             return 0;
         }
 
-        // Phase 3C.1: evaluation only — no mutation
+        // Phase 3C.2: evaluation only — no mutation
         source.sendFeedback(
                 () -> Text.literal("[Coffer] Sell evaluated successfully."),
                 false
