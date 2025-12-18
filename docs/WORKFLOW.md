@@ -226,6 +226,9 @@ It depends on written truth.
 
 ------------------------------------------------
 
+### Running the Fabric dev server
+./gradlew :src:adapter-fabric:runServer
+
 CLOSING STATEMENT
 -----------------
 
