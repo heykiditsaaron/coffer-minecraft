@@ -6,6 +6,7 @@ import dev.coffer.adapter.fabric.boundary.DeclaredItem;
 import dev.coffer.adapter.fabric.boundary.ExchangeIntent;
 import dev.coffer.adapter.fabric.boundary.InvocationContext;
 import dev.coffer.adapter.fabric.boundary.MetadataRelevance;
+import dev.coffer.adapter.fabric.config.MetadataPolicyConfig;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -18,23 +19,19 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * INVENTORY DECLARATION BUILDER — PHASE 3C.2
+ * INVENTORY DECLARATION BUILDER — PHASE 3C.2.A
  *
  * Constructs truthful adapter-side exchange declarations from authoritative
- * player-owned inventory state.
+ * player-owned inventory state with explicit, configurable metadata relevance.
  *
- * Ownership rule:
- * - If the item could be placed into a chest, it is owned.
- * - UI state, screen handlers, and control surfaces are excluded by design.
- *
- * This phase:
- * - observes ownership only
- * - aggregates deterministically (within the current declared metadata stance)
- * - performs no valuation
- * - performs no mutation
- * - makes no UI assumptions
+ * Default stance (Option 2):
+ * - Metadata is IGNORED_BY_DECLARATION unless explicitly configured otherwise.
  */
 public final class InventoryDeclarationBuilder {
+
+    // Adapter-local, explicit config (file-backed later).
+    private static final MetadataPolicyConfig METADATA_POLICY =
+            MetadataPolicyConfig.permissiveDefault();
 
     private InventoryDeclarationBuilder() {
         // utility
@@ -53,22 +50,20 @@ public final class InventoryDeclarationBuilder {
 
         UUID playerId = player.getUuid();
 
-        // Deterministic aggregation:
-        // - LinkedHashMap preserves first-seen order (stable output).
-        // - Key is the declared identity we are asserting (currently: itemId + declared relevance).
+        // Deterministic aggregation.
         Map<DeclaredKey, Integer> countsByKey = new LinkedHashMap<>();
 
-        // Main inventory + hotbar (authoritative ownership)
+        // Main inventory + hotbar
         for (ItemStack stack : player.getInventory().main) {
             addStack(stack, countsByKey);
         }
 
-        // Armor slots are owned items
+        // Armor slots
         for (ItemStack stack : player.getInventory().armor) {
             addStack(stack, countsByKey);
         }
 
-        // Offhand slot is owned item
+        // Offhand
         addStack(player.getOffHandStack(), countsByKey);
 
         if (countsByKey.isEmpty()) {
@@ -80,12 +75,25 @@ public final class InventoryDeclarationBuilder {
             DeclaredKey key = entry.getKey();
             int count = entry.getValue();
 
-            DeclaredItem declared =
-                    DeclaredItem.withoutMetadata(
-                            key.itemId(),
-                            count,
-                            key.relevance()
-                    );
+            if (key.relevance == MetadataRelevance.UNDECLARED) {
+                // Explicit refusal path — no guessing.
+                return Optional.empty();
+            }
+
+            DeclaredItem declared;
+            if (key.relevance == MetadataRelevance.RELEVANT) {
+                // Phase 3C.2.A: metadata relevance is explicit,
+                // but metadata extraction itself is deferred.
+                // If relevance is REQUIRED, but we cannot declare metadata yet, we refuse.
+                return Optional.empty();
+            } else {
+                declared =
+                        DeclaredItem.withoutMetadata(
+                                key.itemId,
+                                count,
+                                key.relevance
+                        );
+            }
 
             declaredItems.add(declared);
         }
@@ -101,9 +109,6 @@ public final class InventoryDeclarationBuilder {
         return Optional.of(request);
     }
 
-    /**
-     * Adds an owned, non-empty stack into the aggregation map.
-     */
     private static void addStack(ItemStack stack, Map<DeclaredKey, Integer> countsByKey) {
         if (stack == null || stack.isEmpty()) {
             return;
@@ -112,11 +117,7 @@ public final class InventoryDeclarationBuilder {
         String itemId = Registries.ITEM.getId(stack.getItem()).toString();
         int count = stack.getCount();
 
-        // Phase 3C.2 (current stance):
-        // - metadata is observed later; we do not interpret it here yet
-        // - we explicitly declare metadata as ignored-by-declaration and omit it
-        MetadataRelevance relevance = MetadataRelevance.IGNORED_BY_DECLARATION;
-
+        MetadataRelevance relevance = METADATA_POLICY.resolveForItem(itemId);
         DeclaredKey key = new DeclaredKey(itemId, relevance);
 
         int prior = countsByKey.getOrDefault(key, 0);
@@ -124,17 +125,39 @@ public final class InventoryDeclarationBuilder {
     }
 
     /**
-     * Declaration aggregation key for Phase 3C.2.
+     * Aggregation key for Phase 3C.2.A.
      *
-     * IMPORTANT:
-     * - This key is intentionally narrow for the current metadata stance.
-     * - When metadata becomes declared (RELEVANT), this key must expand to include
-     *   the declared metadata snapshot (and aggregation must only occur on exact match).
+     * NOTE:
+     * - When metadata becomes declared (RELEVANT with metadata snapshot),
+     *   this key must expand to include declared metadata identity.
      */
-    private record DeclaredKey(String itemId, MetadataRelevance relevance) {
-        private DeclaredKey {
-            if (itemId == null || itemId.isBlank()) throw new IllegalArgumentException("itemId must be non-empty");
-            if (relevance == null) throw new IllegalArgumentException("relevance must be non-null");
+    private static final class DeclaredKey {
+        private final String itemId;
+        private final MetadataRelevance relevance;
+
+        private DeclaredKey(String itemId, MetadataRelevance relevance) {
+            if (itemId == null || itemId.isBlank()) {
+                throw new IllegalArgumentException("itemId must be non-empty");
+            }
+            if (relevance == null) {
+                throw new IllegalArgumentException("relevance must be non-null");
+            }
+            this.itemId = itemId;
+            this.relevance = relevance;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof DeclaredKey other)) return false;
+            return itemId.equals(other.itemId) && relevance == other.relevance;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = itemId.hashCode();
+            result = 31 * result + relevance.hashCode();
+            return result;
         }
     }
 }
