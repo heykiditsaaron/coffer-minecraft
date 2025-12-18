@@ -90,3 +90,96 @@ Authority is now encoded by location.
 Meaning is protected by structure.
 
 The system is ready to be built.
+
+## Movement Alignment (Retrospective Annotation)
+
+This phase primarily contributed to:
+
+- **Movement 1 — Locking the Handshake Shape**
+- **Movement 2 — Establishing Adapter Jurisdiction for Truth Aggregation**
+
+### Intent of the Movement
+
+Phase 1 established structural boundaries that define
+**where complexity is allowed to live** and **where it is forbidden**.
+
+This phase exists to ensure that:
+- semantic authority remains centralized,
+- execution authority remains contextual,
+- and responsibility for truth is never ambiguous.
+
+Structure here is not an organizational convenience.
+It is a defensive measure against dishonest simplification.
+
+### What Made This Movement Necessary
+
+As the system evolved beyond single-item, single-action exchanges,
+it became clear that mixed reality would be unavoidable.
+
+Without strict structural boundaries:
+- aggregation pressure would drift inward,
+- Core purity would erode,
+- and execution layers would begin to flatten reality
+in order to satisfy interfaces not designed for complexity.
+
+This phase prevents that drift by encoding jurisdiction into structure.
+
+### Constraints Held During the Movement
+
+During Phase 1, the following constraints were explicitly maintained:
+
+- Core types must not depend on platform concepts.
+- Adapters must not leak platform logic into Core semantics.
+- Directional dependency must reflect authority, not convenience.
+- Execution complexity must not justify semantic compromise.
+- Structure must forbid accidental responsibility creep.
+
+These constraints ensure that responsibility is visible and enforceable.
+
+### What Was Invented (Not Discovered)
+
+This phase invented **structural jurisdiction** as a first-class safeguard:
+
+- The Core judges truth.
+- Adapters construct truth.
+- Execution carries consequence.
+- Structure enforces separation.
+
+This was not a refactor.
+It was a deliberate allocation of moral and technical burden.
+
+### What Was Explicitly NOT Solved
+
+Phase 1 did NOT attempt to solve:
+
+- how adapters aggregate platform reality,
+- how inventory or batch actions are represented,
+- how partial legitimacy is surfaced,
+- or how execution feedback is presented to users.
+
+These problems were intentionally deferred
+until the correct layer could carry them honestly.
+
+### How This Reduced User Vigilance
+
+By making responsibility explicit in structure,
+the system avoids hidden behavior and silent authority shifts.
+
+Users are not required to infer where decisions are made.
+Adapters absorb complexity transparently,
+and the Core remains predictable and explainable.
+
+This structural clarity is a prerequisite
+for trust without vigilance.
+
+### Signals to Watch For in Future Work
+
+Future changes must be rejected if they attempt to:
+
+- blur Core and adapter responsibility,
+- introduce platform logic into semantic layers,
+- relocate aggregation for ease of implementation,
+- or justify boundary violations in the name of simplicity.
+
+Any such change undermines the purpose of this phase
+and reintroduces ambiguity into the system.

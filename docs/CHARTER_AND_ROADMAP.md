@@ -303,3 +303,61 @@ This system is designed to survive collaborator turnover, loss of context, and t
 - Time in chronicles
 
 **Freeze acknowledged.**
+
+## Movement Alignment (Retrospective Annotation)
+
+This document serves as an **orientation surface**, not an authority-bearing artifact.
+
+It exists to help readers understand *what is planned*,
+not to prescribe *how truth is constructed* or *how execution behaves*.
+
+### Purpose Clarification
+
+The Charter and Roadmap describe **phases of work**, not movements of understanding.
+
+Phases indicate:
+- scope boundaries,
+- sequencing intent,
+- and freeze points.
+
+They do NOT encode:
+- discovery paths,
+- moral reasoning,
+- or execution philosophy.
+
+Those are captured elsewhere.
+
+### Relationship to Movements
+
+Movements are **retrospective explanatory constructs**.
+They are named only after sufficient work exists
+to understand what burden was absorbed and why.
+
+As such:
+- movements do not appear in the roadmap,
+- movements do not gate progress,
+- and movements must not be planned in advance.
+
+They exist solely to transmit understanding forward.
+
+### Relationship to Chronicles
+
+Chronicles are the authoritative historical record
+of what was decided, frozen, deferred, or rejected.
+
+Where clarity is gained after a phase completes,
+retrospective annotations may be added to chronicles
+to preserve intent without rewriting history.
+
+The roadmap does not replace the chronicle.
+It defers to it.
+
+### Guidance for Future Readers
+
+If this document appears incomplete, optimistic, or imprecise:
+- that is intentional.
+
+Truth, refusal semantics, and execution discipline
+are defined by the Law, the Adapter Contract, and the Chronicles.
+
+This document is a map — not the terrain.

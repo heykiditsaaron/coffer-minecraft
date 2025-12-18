@@ -158,3 +158,99 @@ The law now executes.
 The Core is boring.  
 The Core is honest.  
 The Core endures.
+
+## Movement Alignment (Retrospective Annotation)
+
+This phase primarily contributed to:
+
+- **Movement 1 — Locking the Handshake Shape**
+- **Movement 3 — Preserving Singular Verdict Authority**
+
+### Intent of the Movement
+
+Phase 2 established the Core Engine as a **singular, non-negotiating authority**
+whose responsibility is to judge a fully declared truth exactly once.
+
+The Core was intentionally designed to:
+- accept a complete declaration,
+- evaluate it deterministically,
+- emit a single verdict,
+- and refuse dishonesty without attempting to resolve ambiguity.
+
+This phase exists to ensure that evaluation remains boring, predictable,
+and free from platform-specific complexity.
+
+### What Made This Movement Necessary
+
+As later phases would involve mixed reality
+(multiple items, quantities, metadata-bearing variants, and partial legitimacy),
+it was necessary to prevent the Core from becoming a site of negotiation,
+aggregation, or reconciliation.
+
+The Core does not discover truth.
+It judges declared truth.
+
+Any system that allows the Core to “helpfully” resolve ambiguity
+would eventually force it to invent meaning or flatten reality.
+
+This phase prevents that failure mode permanently.
+
+### Constraints Held During the Movement
+
+During Phase 2, the following constraints were explicitly maintained:
+
+- The Core MUST issue exactly one verdict per evaluation.
+- The Core MUST remain agnostic of platform, inventory, or UI concerns.
+- The Core MUST NOT partition or partially accept mixed declarations.
+- The Core MUST NOT infer intent or correct incomplete truth.
+- The Core MUST NOT mutate state.
+
+These constraints are not limitations.
+They are the conditions that make later honesty possible.
+
+### What Was Invented (Not Discovered)
+
+This phase invented the **singular-verdict evaluation boundary** as a hard law:
+
+- Mixed reality is not the Core’s responsibility.
+- Partial truth is not the Core’s concern.
+- Aggregation and partitioning must occur before invocation.
+
+This invention deliberately shifts the burden of complexity outward,
+so the Core may remain exact, auditable, and incorruptible.
+
+### What Was Explicitly NOT Solved
+
+Phase 2 did NOT attempt to solve:
+
+- inventory-backed truth,
+- batch or partial execution,
+- user intent interpretation,
+- or platform-specific refusal behavior.
+
+These omissions were intentional.
+Solving them here would have required the Core to violate its own purpose.
+
+### How This Reduced User Vigilance
+
+By refusing to negotiate or invent meaning,
+the Core guarantees that any verdict it issues is final, explicit, and explainable.
+
+This allows adapters to absorb complexity on behalf of users,
+knowing that once truth is honestly declared,
+the system will behave exactly as stated.
+
+Users are not required to second-guess the Core.
+They are protected from silent reinterpretation.
+
+### Signals to Watch For in Future Work
+
+Future changes must be rejected if they attempt to:
+
+- introduce partial verdicts into the Core,
+- allow the Core to accept ambiguous or flattened declarations,
+- move aggregation or reconciliation logic into evaluation,
+- or relax the single-verdict invariant “for convenience.”
+
+Any such change violates the purpose of this phase
+and reintroduces vigilance into the system.

@@ -143,3 +143,103 @@ Phase 3C.1 is complete when:
 These conditions are met.
 
 The system is operational, truthful, and intentionally incomplete in declared exchange realism until Phase 3C.2.
+
+## Movement Alignment (Retrospective Annotation)
+
+This phase primarily contributed to:
+
+- **Movement 1 — Locking the Handshake Shape**
+- **Movement 2 — Enforcing Honesty Under Partial Knowledge**
+- **Movement 4 — Teaching the System to Refuse Without Punishing**
+
+### Intent of the Movement
+
+Phase 3C.1 exists to prove that **valuation honesty is enforceable**
+even when valuation coverage is minimal, incomplete, or intentionally narrow.
+
+The purpose of this phase was not to create a functioning economy.
+It was to demonstrate that:
+- value must be explicit,
+- absence must deny,
+- metadata must be respected,
+- and refusal must be preferred over approximation.
+
+This phase establishes valuation as a truth obligation, not a convenience.
+
+### What Made This Movement Necessary
+
+Once adapter declaration envelopes existed,
+the next unavoidable pressure was valuation.
+
+Without an explicit demonstration that valuation could:
+- deny unknown items,
+- reject metadata ambiguity,
+- and refuse partial certainty,
+
+future work would be tempted to “fill gaps” with defaults,
+best-effort pricing, or silent normalization.
+
+This phase proves that such shortcuts are not required
+to achieve forward progress.
+
+### Constraints Held During the Movement
+
+During Phase 3C.1, the following constraints were explicitly enforced:
+
+- Valuation MUST be explicit and auditable.
+- Items without declared value MUST be denied.
+- Metadata relevance MUST be respected by default.
+- No mutation may occur, regardless of valuation result.
+- A PASS result MUST NOT imply possession or execution.
+
+These constraints ensure that valuation does not become persuasive fiction.
+
+### What Was Invented (Not Discovered)
+
+This phase invented **valuation as a deny-capable truth surface**:
+
+- valuation snapshots as immutable artifacts,
+- per-item acceptance and rejection,
+- and explicit INVALID_VALUE denials as first-class outcomes.
+
+Hard-coded valuation (e.g., a single known item)
+was not a placeholder for completeness,
+but a tool to isolate and test honesty under scarcity.
+
+### What Was Explicitly NOT Solved
+
+Phase 3C.1 intentionally does NOT solve:
+
+- inventory-backed possession,
+- aggregation across multiple items,
+- partial execution semantics,
+- user-facing previews or estimates,
+- or economic usefulness.
+
+Solving these here would have forced valuation
+to operate on assumed truth rather than declared fact.
+
+### How This Reduced User Vigilance
+
+By denying unknown or ambiguous value explicitly,
+the system avoids teaching users to “try and see.”
+
+There is no hidden success path.
+No item becomes valuable by accident.
+No metadata is ignored silently.
+
+Users are not required to memorize rules.
+The system communicates its boundaries through refusal.
+
+### Signals to Watch For in Future Work
+
+Future changes must be rejected if they attempt to:
+
+- soften INVALID_VALUE into warnings,
+- introduce default or fallback pricing,
+- ignore metadata for convenience,
+- imply execution from valuation PASS,
+- or reframe this phase as incomplete rather than intentional.
+
+Any such change reintroduces approximation
+and undermines valuation honesty.

@@ -234,3 +234,75 @@ the system must refuse to proceed.
 
 This is not a limitation.
 It is the design.
+
+## Movement Alignment (Retrospective Annotation)
+
+This contract is **binding and authoritative**.
+This annotation is not.
+
+It exists solely to explain **why** certain obligations are present,
+not to soften, reinterpret, or expand them.
+
+### Purpose Clarification
+
+The Adapter Contract exists to define
+**who carries the burden of truth when reality is complex**.
+
+It does not:
+- prescribe UX,
+- mandate execution models,
+- or guarantee economic usefulness.
+
+It forbids dishonesty.
+
+### Why Composite Truth Was Codified
+
+The Composite Truth / Aggregation Obligation was added
+after sufficient implementation experience revealed a recurring pressure:
+
+Mixed platform reality naturally encourages
+all-or-nothing declarations for convenience.
+
+This pressure is not malicious.
+It is structural.
+
+Codifying composite truth explicitly ensures that:
+- adapters must absorb aggregation complexity,
+- Core remains singular and deterministic,
+- and users are not forced to act as auditors.
+
+This obligation does not require partial execution.
+It requires honest construction or explicit refusal.
+
+### Relationship to the Core
+
+The contract reinforces a strict separation:
+
+- The Core judges truth.
+- Adapters construct truth.
+- Execution applies consequence.
+
+No layer may borrow responsibility from another
+without violating the contract.
+
+### Relationship to Movements and Chronicles
+
+Movements explain how understanding evolved.
+Chronicles record what was frozen and why.
+This contract defines what is permitted — regardless of context.
+
+Annotations do not change enforcement.
+They preserve clarity.
+
+### Guidance for Future Implementers
+
+If an adapter implementation feels heavy, strict, or inconvenient:
+- that is expected.
+
+The cost of truthful aggregation is intentionally paid once,
+by the system,
+so that users do not pay it repeatedly through vigilance.
+
+Any attempt to “simplify” by flattening mixed reality
+violates the purpose of this contract,
+even if behavior appears correct in the short term.

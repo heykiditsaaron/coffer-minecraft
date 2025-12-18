@@ -211,4 +211,108 @@ Future phases may safely build:
 - persistence,
 - and expressiveness
 
-on top of this foundation **withou**
+on top of this foundation **without reinterpretation**.
+
+---
+
+## FREEZE DECLARATION
+
+As of this chronicle:
+- Phase 3 behavior is frozen.
+- Phase 3 constraints are canonical.
+- No reinterpretation is permitted.
+- Any deviation requires a new phase.
+
+**Phase 3 is sealed.**
+
+## Movement Alignment (Retrospective Annotation)
+
+This phase primarily contributed to:
+
+- **Movement 1 — Locking the Handshake Shape**
+- **Movement 2 — Establishing Adapter Jurisdiction for Truth Aggregation**
+
+### Intent of the Movement
+
+Phase 3 establishes the adapter as a **jurisdiction-bearing execution layer**
+whose responsibility is to observe platform reality, declare facts without inference,
+and refuse explicitly when truth cannot be established.
+
+This phase exists to prove that:
+- the Core can remain sealed and singular,
+- adapters can carry execution responsibility without inventing meaning,
+- and platform reality can be surfaced honestly without premature aggregation.
+
+Phase 3 is not scaffolding.
+It is a complete, frozen articulation of adapter responsibility.
+
+### What Made This Movement Necessary
+
+With Core law and structural boundaries already frozen,
+the system required a live platform implementation to verify that:
+
+- declaration envelopes could remain fact-only,
+- refusal could replace approximation everywhere,
+- and future expressiveness could be preserved by *not* solving the wrong problems early.
+
+Fabric serves as a reference platform to validate that jurisdictional discipline
+survives real execution pressure.
+
+### Constraints Held During the Movement
+
+During Phase 3, the following constraints were explicitly enforced:
+
+- Adapters MUST declare facts or refuse — never infer.
+- Adapters MUST NOT aggregate, value, or mutate.
+- Adapters MUST treat metadata as potentially non-fungible by default.
+- Adapters MUST surface operational state and refuse when not READY.
+- Commands MUST act only as callers, never as logic owners.
+
+These constraints prevent the adapter from becoming a site of silent decision-making.
+
+### What Was Invented (Not Discovered)
+
+This phase invented the **canonical adapter spine** as a durable concept:
+
+- a single runtime door,
+- explicit operational states,
+- declaration envelopes with no semantic meaning,
+- and an explicit refusal doctrine distinct from Core denial.
+
+These inventions allocate responsibility clearly:
+the adapter constructs truth; the Core judges it.
+
+### What Was Explicitly NOT Solved
+
+Phase 3 intentionally does NOT solve:
+
+- inventory-backed aggregation,
+- valuation correctness,
+- Core invocation,
+- mutation or persistence,
+- or user-facing trust mechanics.
+
+These omissions are deliberate.
+Solving them here would have required flattening mixed reality
+or freezing abstractions before they could be tested honestly.
+
+### How This Reduced User Vigilance
+
+By preferring explicit refusal over approximation,
+Phase 3 ensures that no system behavior is implied, guessed, or hidden.
+
+Users and future systems are protected from false confidence.
+Trust is delayed until it can be earned,
+rather than simulated through partial or premature execution.
+
+### Signals to Watch For in Future Work
+
+Future changes must be rejected if they attempt to:
+
+- introduce aggregation or valuation into this phase,
+- collapse refusal into silent omission,
+- treat commands as ownership boundaries,
+- or reinterpret declaration envelopes as semantic carriers.
+
+Any such change violates the purpose of this phase
+and undermines the adapter’s jurisdictional role.

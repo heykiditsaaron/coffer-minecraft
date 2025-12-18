@@ -92,3 +92,97 @@ This phase represents the end of ambiguity.
 All future work exists **because this phase exists**.
 
 The law endures.
+
+## Movement Alignment (Retrospective Annotation)
+
+This phase underpins **all movements** and does not correspond to a single one.
+
+Phase 0 exists as the immutable reference frame
+against which all later work must be judged.
+
+### Intent of the Movement
+
+Phase 0 established that **truth is non-negotiable**.
+
+The law defined here intentionally prioritizes:
+- refusal over approximation,
+- explicit denial over silent behavior,
+- and determinism over convenience.
+
+This phase exists to ensure that no later discovery,
+pressure, or usability concern
+can justify dishonesty.
+
+### What Made This Movement Necessary
+
+Before any structure, execution, or valuation could exist,
+it was necessary to establish a foundation
+that could not be eroded by implementation difficulty.
+
+Without an absolute law:
+- adapters would drift toward convenience,
+- Core semantics would be reinterpreted,
+- and users would inherit the burden of vigilance.
+
+Phase 0 prevents that outcome by design.
+
+### Constraints Held During the Movement
+
+During Phase 0, the following constraints were frozen permanently:
+
+- Truth must be explicit or denied.
+- Absence is a valid and preferred state.
+- No system component may invent meaning.
+- No component may “help” by guessing.
+- Evaluation and mutation must remain distinct.
+
+These constraints are not subject to revision.
+They are the conditions under which the system is allowed to exist.
+
+### What Was Invented (Not Discovered)
+
+Phase 0 invented **refusal as a moral stance**.
+
+Not as an error,
+not as a punishment,
+but as the only honest response to uncertainty.
+
+This invention reframes failure:
+not as something to hide,
+but as something to communicate clearly.
+
+### What Was Explicitly NOT Solved
+
+Phase 0 intentionally does NOT solve:
+
+- usability,
+- economy balance,
+- player experience,
+- platform mechanics,
+- or implementation strategy.
+
+The law does not optimize.
+It constrains.
+
+All later work exists inside these constraints.
+
+### How This Reduced User Vigilance
+
+By making dishonesty impossible at the system level,
+Phase 0 ensures that users are never required
+to second-guess outcomes or infer hidden rules.
+
+Trust is not earned through success.
+It is earned through consistency.
+
+### Signals to Watch For in Future Work
+
+Future changes must be rejected if they attempt to:
+
+- reinterpret refusal as a failure state,
+- weaken denial semantics,
+- introduce silent defaults,
+- or subordinate truth to usability.
+
+Any such change violates the law
+and collapses the system’s moral foundation.
