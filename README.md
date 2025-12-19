@@ -81,6 +81,24 @@ Coffer follows a small set of non-negotiable principles:
 
 ---
 
+## Operational Integrity & Failure Boundaries
+
+Coffer prioritizes honesty and state integrity over automatic recovery.
+
+In rare circumstances, a mutation may fail in a way that prevents Coffer from guaranteeing a truthful rollback. When this occurs, Coffer will refuse to continue economic execution until the system state can be reviewed.
+
+This behavior is intentional.
+
+Coffer does not guess, silently correct, or partially recover from corruption. Doing so would risk dishonest outcomes, partial loss, or invisible inconsistency — all of which violate Coffer’s core principles.
+
+When Coffer cannot proceed safely, it will stop.
+
+This protects players from confusion, prevents hidden damage, and ensures administrators are always operating with a known and auditable system state.
+
+Administrators are encouraged to test Coffer alongside other mods, inventory systems, and persistence layers before enabling it in production environments.
+
+---
+
 ## Commons License
 
 Coffer is distributed under the **Coffer Commons License (CCL)**.
@@ -91,7 +109,7 @@ Coffer is distributed under the **Coffer Commons License (CCL)**.
 - Monetized servers may use Coffer, but Coffer may not be the reason money is requested.
 - No one may claim official affiliation, endorsement, or representation.
 
-In short:
+In short:  
 **Coffer is a commons.  
 Honesty may not be privatized.**
 

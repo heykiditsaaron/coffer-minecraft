@@ -171,6 +171,13 @@ Adapters MUST NOT:
 
 Mutation is the final step. Always.
 
+If a mutation cannot be completed and a truthful rollback cannot be guaranteed,
+the adapter MUST refuse further economic execution and surface the condition
+for administrative review.
+
+Adapters MUST NOT attempt partial recovery, speculative correction,
+or silent continuation in such cases.
+
 ---
 
 ### 7. Player-Facing Output Decoration
