@@ -70,7 +70,7 @@ Out of Scope:
 ---
 
 ## PHASE 3D.2 — INVENTORY MUTATION (REMOVAL ONLY)
-Status: CURRENT / PAUSED FOR PLANNING
+Status: COMPLETE / CHRONICLED 
 
 Purpose:
 Introduce the first irreversible interaction with platform reality.
