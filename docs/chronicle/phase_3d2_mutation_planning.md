@@ -199,3 +199,27 @@ No mutation logic should be introduced unless:
 - it never reconstructs intent
 
 This phase exists to make that possible without compromise.
+
+---
+
+## RETROSPECTIVE ANNOTATION (POST-DISCOVERY)
+
+### Verified Absence of Inventory Mutation
+
+After Phase 3D.2 was completed and frozen, a full repository-wide inspection
+was performed prior to initiating Phase 3D.3.
+
+This inspection confirmed that, at the close of Phase 3D.2:
+
+- **No inventory mutation or restoration code existed**
+- No item removal, decrement, clearing, or rollback logic was present
+- All references to mutation were limited to planning, binding, or comments
+
+This absence was:
+- intentional,
+- safe,
+- and consistent with the goals of Phase 3D.2.
+
+As a result, Phase 3D.3 introduces inventory mutation **explicitly and from first principles**, rather than wrapping or reinterpreting legacy behavior.
+
+This annotation records *witnessed reality*, not retroactive intent.

@@ -131,3 +131,26 @@ Future changes must be rejected if they attempt to:
 
 Any such change undermines the purpose of this phase
 and reintroduces misleading behavior.
+
+---
+
+## RETROSPECTIVE CLARIFICATION (POST–PHASE 3 DISCOVERY)
+
+During later Phase 3D discovery, a full repository inspection confirmed that
+at the conclusion of Phase 3B:
+
+- **No inventory mutation logic existed**
+- The only balance-related behavior was an **in-memory, non-transactional primitive**
+  with no rollback guarantees and no semantic authority
+- No durable, authoritative, or inventory-backed “selling” occurred
+
+Accordingly, the phrase:
+
+> “applies adapter-owned mutation”
+
+should be read historically as:
+
+> “executes through the adapter’s execution surface with a *temporary, non-authoritative mutation primitive*, later corrected and constrained to preserve honesty.”
+
+This clarification records witnessed reality without altering the original intent
+or achievements of Phase 3B.
