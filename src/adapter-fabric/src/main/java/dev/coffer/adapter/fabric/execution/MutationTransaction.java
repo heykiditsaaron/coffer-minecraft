@@ -6,23 +6,6 @@ import dev.coffer.adapter.fabric.execution.step.InventoryRemovalStep;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * MUTATION TRANSACTION — PHASE 3D.3
- *
- * Coordinates atomic execution of:
- *  1) Inventory removal
- *  2) Balance credit
- *
- * Guarantees:
- * - Either both mutations succeed, or both are rolled back
- * - No partial success is observable
- * - No guessing or recomputation
- *
- * Failure semantics (Option C):
- * - Rollback on any failure
- * - Return explicit failure result
- * - Do NOT fault the adapter here
- */
 public final class MutationTransaction {
 
     private final UUID targetPlayerId;
@@ -36,63 +19,43 @@ public final class MutationTransaction {
             InventoryRemovalStep inventoryStep,
             BalanceCreditStep balanceStep
     ) {
-        this.targetPlayerId = Objects.requireNonNull(targetPlayerId, "targetPlayerId");
-        this.inventoryStep = Objects.requireNonNull(inventoryStep, "inventoryStep");
-        this.balanceStep = Objects.requireNonNull(balanceStep, "balanceStep");
+        this.targetPlayerId = Objects.requireNonNull(targetPlayerId);
+        this.inventoryStep = Objects.requireNonNull(inventoryStep);
+        this.balanceStep = Objects.requireNonNull(balanceStep);
     }
 
-    /**
-     * Execute the transaction atomically.
-     *
-     * Returns:
-     * - Result.success() if and only if both steps applied
-     * - Result.failure(...) if any step failed (all changes rolled back)
-     *
-     * This method is single-use.
-     */
     public Result execute() {
         if (executed) {
-            return Result.failure("TRANSACTION_ALREADY_EXECUTED");
+            return Result.fail("TRANSACTION_ALREADY_EXECUTED");
         }
         executed = true;
 
-        InventoryRemovalStep.ApplyResult inventoryResult = inventoryStep.apply();
-        if (!inventoryResult.applied()) {
-            return Result.failure("INVENTORY_REMOVAL_FAILED: " + inventoryResult.reason());
+        InventoryRemovalStep.ApplyResult inv = inventoryStep.apply();
+        if (!inv.success()) {
+            return Result.fail("INVENTORY_REMOVAL_FAILED: " + inv.reason());
         }
 
-        BalanceCreditStep.ApplyResult balanceResult = balanceStep.apply(targetPlayerId);
-        if (!balanceResult.applied()) {
+        BalanceCreditStep.ApplyResult bal = balanceStep.apply(targetPlayerId);
+        if (!bal.success()) {
             inventoryStep.rollback();
-            return Result.failure("BALANCE_CREDIT_FAILED: " + balanceResult.reason());
+            return Result.fail("BALANCE_CREDIT_FAILED: " + bal.reason());
         }
 
-        return Result.success();
+        return Result.ok();
     }
 
-    /**
-     * Explicit rollback entry point.
-     *
-     * This should only be called if a higher-level failure requires
-     * reversing a completed transaction in future phases.
-     */
     public void rollback() {
         balanceStep.rollback(targetPlayerId);
         inventoryStep.rollback();
     }
 
-    // -------------------------
-    // Types
-    // -------------------------
-
     public record Result(boolean success, String reason) {
-
-        public static Result success() {
+        public static Result ok() {
             return new Result(true, null);
         }
 
-        public static Result failure(String reason) {
-            return new Result(false, Objects.requireNonNull(reason, "reason"));
+        public static Result fail(String reason) {
+            return new Result(false, Objects.requireNonNull(reason));
         }
     }
 }

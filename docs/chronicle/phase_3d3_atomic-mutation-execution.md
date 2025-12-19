@@ -144,3 +144,33 @@ Phase 3D.3 establishes a **trustworthy execution substrate** where:
 - Honesty is effortless
 
 This concludes Phase 3D.3.
+
+---
+
+## Annotation — Post-Completion Build Correction
+
+**Date:** Immediately following Phase 3D.3 implementation  
+**Scope:** Mechanical correctness only (no semantic changes)
+
+After Phase 3D.3 was functionally completed, a mandatory build verification (`./gradlew build`) surfaced **Java compilation errors** related to the use of `record` types.
+
+### Nature of the Issue
+
+- Java `record` components automatically generate accessor methods
+- Static factory methods were originally named identically to record components
+- This resulted in **illegal method name collisions** at compile time
+- No execution semantics, invariants, or behaviors were affected
+
+### Resolution
+
+- A dedicated **cleanup branch** was created
+- Factory methods were mechanically renamed (`ok / fail`) to avoid collisions
+- A no-argument constructor was restored for Phase 3D.2 compatibility
+- No logic, ordering, invariants, or execution semantics were changed
+
+### Verification
+
+- A full `./gradlew build` completed successfully after correction
+- Phase 3D.3 semantics remain **unchanged and frozen**
+
+This annotation records the correction for audit transparency and does **not** reopen or modify Phase 3D.3.
