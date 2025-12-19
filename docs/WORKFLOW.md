@@ -25,23 +25,40 @@ CORE PRINCIPLES
    - Code must conform to law, never the reverse.
    - If code and law disagree, code is wrong.
 
-2. NO GUESSING
+2. **NO ASSUMPTION (HARD RULE)**
+   - Assumption is not a shortcut; it is a violation.
+   - No collaborator may infer:
+     - ownership,
+     - authority,
+     - intent,
+     - lifecycle,
+     - or responsibility
+     unless it is explicitly written in law, contract, or chronicle.
+   - If information is missing:
+     - STOP.
+     - Ask.
+     - Or refuse to proceed.
+   - “This is probably how it works” is never acceptable.
+   - Silence is not permission.
+   - Familiar patterns from other systems do not apply unless stated.
+
+3. NO GUESSING
    - If something is unclear, stop.
    - Clarify intent before implementing.
    - Compiler errors are signals, not annoyances.
 
-3. FAIL CLOSED
+4. FAIL CLOSED
    - Absence of truth results in refusal, not defaults.
    - System must boot even when functionality is absent.
    - Refusal is always preferable to pretending.
 
-4. PLACEHOLDERS MUST CONFESS
+5. PLACEHOLDERS MUST CONFESS
    - Any temporary behavior must:
      - be explicit,
      - be documented,
      - and be impossible to mistake for final behavior.
 
-5. BREADTH FIRST, THEN DEPTH
+6. BREADTH FIRST, THEN DEPTH
    - Establish structure and boundaries first.
    - Defer detail until truth requires it.
    - Never lock the future prematurely.
@@ -51,7 +68,8 @@ CORE PRINCIPLES
 PHASE-BASED EXECUTION
 ---------------------
 
-Work is divided into PHASES.
+Work is divided into PHASES (e.g., Phase 3C, Phase 3D).
+
 Each phase:
 - has a narrow scope,
 - introduces one category of truth,
@@ -64,6 +82,37 @@ A phase is NOT:
 
 A phase IS:
 - a proof that a truth boundary holds.
+
+------------------------------------------------
+
+DECIMAL SUB-PHASES (MANDATORY DISCIPLINE)
+----------------------------------------
+
+Within a phase, work may be subdivided using decimals
+(e.g., 3D.0, 3D.1, 3D.2).
+
+These decimals are **not informal**.
+They exist to prevent drift.
+
+Rules:
+
+- Every decimal sub-phase:
+  - has a defined intent,
+  - may include code or be purely conceptual,
+  - and MUST be closed with a chronicle.
+
+- Decimal chronicles are REQUIRED even if:
+  - no code was written,
+  - only discussion occurred,
+  - or the outcome was “we learned something.”
+
+- Work may not advance to the next decimal
+  until the current decimal is chronicled.
+
+This exists specifically to prevent:
+- silent phase transitions,
+- retroactive reinterpretation,
+- and “I thought we were still in X” failures.
 
 ------------------------------------------------
 
@@ -87,11 +136,11 @@ Never:
 BRANCHING RITUAL
 ----------------
 
-For every phase or sub-phase:
+For every phase or decimal sub-phase:
 
 1. Create a new branch BEFORE code changes
    Example:
-     git checkout -b phase-3c1-fabric-valuation
+     git checkout -b phase-3d2-inventory-mutation
 
 2. All work happens on that branch.
 3. main is never used for active work.
@@ -143,7 +192,7 @@ If placeholder behavior exists:
 
 - It must be:
   - named as placeholder,
-  - scoped to a phase,
+  - scoped to a phase or decimal,
   - and removed or replaced in a later phase.
 
 - Placeholder behavior must NEVER:
@@ -156,14 +205,14 @@ If placeholder behavior exists:
 CHRONICLING
 -----------
 
-At the end of each phase:
+At the end of each phase **and each decimal sub-phase**:
 
 1. Write a chronicle entry.
 2. Chronicle MUST include:
    - what was proven,
    - what was intentionally NOT done,
    - any behavior that could be misread,
-   - explicit boundaries to the next phase.
+   - explicit boundaries to the next phase or decimal.
 
 Chronicles exist to:
 - externalize memory,
@@ -172,13 +221,13 @@ Chronicles exist to:
 
 ------------------------------------------------
 
-GIT RITUAL (END OF PHASE)
-------------------------
+GIT RITUAL (END OF PHASE OR DECIMAL)
+-----------------------------------
 
 1. Verify git status (only intended files changed).
 2. Stage only those files.
 3. Commit with:
-   - phase identifier,
+   - phase or decimal identifier,
    - truthful scope description.
 4. Push branch.
 5. Open PR via GitHub UI.
@@ -202,7 +251,7 @@ At any point, if something:
 The correct action is:
 - STOP,
 - articulate the concern,
-- resolve it in law or contract,
+- resolve it in law, contract, or chronicle,
 - then continue.
 
 Intuition is treated as an early-warning system,
