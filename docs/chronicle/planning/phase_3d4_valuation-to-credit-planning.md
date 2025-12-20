@@ -39,9 +39,21 @@ Their actual sufficiency must be validated during implementation.
 
 ### Core-Side
 - `ExchangeEvaluationResult`
-  - Treated as opaque
-  - Only explicitly exposed surfaces may be used
-  - No inference or interpretation is permitted
+  - Treated as opaque at the boundary
+  - Only explicitly exposed surfaces may be consumed
+  - No inference or reinterpretation is permitted
+
+- `ValuationService`
+  - Produces a `ValuationSnapshot`
+  - Does not mutate state
+
+- `ValuationSnapshot`
+  - Immutable Core-produced valuation output
+  - Contains:
+    - `List<ValuationItemResult>`
+    - `long totalAcceptedValue`
+  - Encodes acceptance decisions and value totals upstream
+  - Must be treated as authoritative when present
 
 ### Adapter-Side
 - `DeclaredExchangeRequest`
@@ -52,6 +64,34 @@ Their actual sufficiency must be validated during implementation.
 - Installed policy layers
 
 If any of these assumptions are invalid, this document must be annotated.
+
+---
+
+## Discovery Annotation — Valuation Surface Reality
+
+**Discovery:**  
+Inspection of Core valuation interfaces confirmed that all valuation snapshots are produced by `ValuationService` and are instances of `ValuationSnapshot`.
+
+**Implications:**
+- Although `ExchangeEvaluationResult` stores the snapshot as `Object`, the producer contract is typed and stable.
+- `ValuationSnapshot.totalAcceptedValue()` provides a single, explicit numeric credit surface.
+- Acceptance and rejection decisions are already resolved by Core.
+- The adapter must not recompute, reinterpret, or infer value beyond this surface.
+
+**Constraints Reaffirmed:**
+- Planning must refuse if the snapshot is:
+  - missing
+  - not a `ValuationSnapshot`
+  - reports zero accepted value
+- The adapter must not depend on:
+  - external APIs
+  - third-party libraries
+  - platform-provided economic systems
+- All credit planning must rely solely on Core-produced truth and adapter-owned logic.
+
+This discovery enables Phase 3D.4 planning **without violating the no-guessing rule**.
+
+This annotation is **non-binding** and must be reconciled in the final Phase 3D.4 chronicle.
 
 ---
 
@@ -69,9 +109,9 @@ Phase 3D.4 intends to produce exactly one of the following outcomes:
 
 ### 2. Explicit Planning Refusal
 Examples (non-exhaustive):
-- Core PASS with no creditable value
-- Core PASS with partial acceptance that cannot be planned safely
-- Metadata relevance prevents valuation
+- Core PASS with no accepted value
+- Snapshot missing or unsupported
+- Metadata relevance blocks valuation
 - Ambiguous or unavailable valuation surfaces
 
 No silent fallback is permitted.
@@ -91,6 +131,7 @@ The following constraints are reaffirmed:
 - No policy changes
 - No Core introspection beyond public surfaces
 - No reinterpretation of Core meaning
+- No reliance on external dependencies or APIs
 
 Planning must be boring, explicit, and auditable.
 
@@ -102,42 +143,38 @@ The following responsibilities are proposed for Phase 3D.4.
 They may change as implementation reveals facts.
 
 ### 1. Evaluation Surface Inspection
-- Determine what numeric or structured value, if any, is available from `ExchangeEvaluationResult`
-- Document what can be safely consumed
-- Refuse planning if surfaces are insufficient
+- Require `ExchangeEvaluationResult.allowed() == true`
+- Require snapshot to be an instance of `ValuationSnapshot`
+- Refuse planning otherwise
 
 ### 2. Credit Planning Rules
-- Define adapter-owned rules for turning evaluation output into a numeric credit
-- Rules must be explicit and deterministic
-- Rules must not leak Core semantics
+- Use `ValuationSnapshot.totalAcceptedValue()` as the sole credit source
+- Treat zero-value acceptance as a refusal
+- Do not inspect per-item valuation for planning
 
 ### 3. Credit Planning Component
 - Likely artifact: `BalanceCreditPlanner`
 - Inputs:
   - `ExchangeEvaluationResult`
-  - `DeclaredExchangeRequest`
+  - Player identity (direct or derived)
 - Output:
   - `BalanceCreditPlan` or explicit refusal
 - No side effects
 
 ### 4. Non-Activating Wiring
-- Allow callers (e.g., sell command or future UI) to request planning
-- Do not enable execution paths
+- Allow callers to request planning
+- Do not enable mutation execution
 - Preserve Phase 3D.2 and 3D.3 behavior
 
 ---
 
 ## Open Questions (To Be Resolved)
 
-The following questions are intentionally unanswered:
+- Should zero-value PASS ever produce a credit plan?
+- Should planning refusal be distinguishable from Core denial?
+- Should partial acceptance be surfaced later for UI only?
 
-- Does `ExchangeEvaluationResult` expose total value, per-item value, or neither?
-- How are rejected items represented post-evaluation?
-- Are zero-value PASS results valid?
-- Are rounding or precision rules required?
-- Should partial acceptance ever produce a credit plan?
-
-These must be answered by inspection, not assumption.
+These must be resolved by inspection and testing, not assumption.
 
 ---
 
@@ -145,11 +182,10 @@ These must be answered by inspection, not assumption.
 
 Phase 3D.4 will be considered successful when:
 
-- A `BalanceCreditPlan` can be produced deterministically when possible
-- All failure cases are explicit and non-punitive
-- No execution depends on implicit value
-- No future UI must guess what will happen
-- All assumptions made here are either validated or documented as incorrect
+- A `BalanceCreditPlan` can be produced deterministically
+- All refusal cases are explicit and non-punitive
+- No future execution depends on implicit value
+- All assumptions in this document are validated or corrected
 
 Only then may a **final phase chronicle** be written.
 
