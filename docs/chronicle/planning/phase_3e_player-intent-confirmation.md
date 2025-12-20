@@ -204,5 +204,17 @@ All binding truth for Phase 3E will live in the
 final chronicle written after a successful build.
 
 ---
+### Annotation — Intent Confirmation Term
+
+During Phase 3E planning, the term **Intent Confirmation** was introduced
+and added to the project glossary.
+
+This term names the server-owned, non-mutating artifact used to present a
+fully evaluated outcome to a player for consent prior to execution.
+
+The introduction of this term does not expand Phase 3E scope.
+It exists to stabilize language and prevent ambiguity in future discussion.
+
+---
 
 End of planning chronicle.
