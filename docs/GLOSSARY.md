@@ -152,6 +152,25 @@ The Core does not interpret platform meaning inside the request.
 
 ---
 
+### Intent Confirmation
+
+An **Intent Confirmation** is a server-owned, non-mutating representation of a
+specific, fully evaluated outcome that *could* occur if execution were to proceed.
+
+It exists to allow a player to knowingly consent to an exact result **without
+committing mutation**.
+
+An Intent Confirmation:
+- is derived solely from authoritative server state,
+- describes exactly what would happen if executed,
+- may be invalidated at any time if truth changes,
+- does not guarantee execution,
+- and does not authorize mutation on its own.
+
+Intent Confirmation is agreement to outcome, not agreement to rules.
+
+---
+
 ## Mutation
 
 A real-world change resulting from a permitted exchange.
