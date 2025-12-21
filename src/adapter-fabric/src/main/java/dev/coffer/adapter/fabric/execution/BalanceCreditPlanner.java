@@ -7,23 +7,15 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * BALANCE CREDIT PLANNER — PHASE 3D.4
+ * BALANCE CREDIT PLANNER
  *
- * Adapter-owned planning component responsible for transforming a Core
- * evaluation result into an explicit, immutable BalanceCreditPlan.
+ * Responsibility:
+ * - Transform Core evaluation result into an explicit BalanceCreditPlan.
  *
- * This class:
- * - performs NO mutation
- * - performs NO execution
- * - performs NO persistence
- * - performs NO recomputation of value
- *
- * It exists solely to absorb the burden of honesty by:
- * - inspecting Core-produced valuation truth
- * - refusing explicitly when planning is impossible
- * - freezing credit intent before any execution occurs
- *
- * All outcomes are explicit and non-punitive.
+ * Invariants:
+ * - Only plans after Core PASS.
+ * - Requires ValuationSnapshot with accepted value > 0.
+ * - Refuses calmly and explicitly when planning is impossible.
  */
 public final class BalanceCreditPlanner {
 
@@ -31,18 +23,6 @@ public final class BalanceCreditPlanner {
         // stateless
     }
 
-    /**
-     * Attempt to construct a BalanceCreditPlan from a Core evaluation result.
-     *
-     * Planning rules:
-     * - Evaluation must be allowed (PASS)
-     * - A valuation snapshot must be present
-     * - Snapshot must be a ValuationSnapshot
-     * - At least one item must have been accepted
-     * - Total accepted value must be > 0
-     *
-     * Any failure results in an explicit planning refusal.
-     */
     public BalanceCreditPlanningResult plan(
             UUID targetPlayerId,
             ExchangeEvaluationResult evaluationResult
@@ -50,7 +30,6 @@ public final class BalanceCreditPlanner {
         Objects.requireNonNull(targetPlayerId, "targetPlayerId");
         Objects.requireNonNull(evaluationResult, "evaluationResult");
 
-        // Planning is only meaningful after Core PASS.
         if (!evaluationResult.allowed()) {
             return BalanceCreditPlanningResult.refused(
                     BalanceCreditPlanningRefusal.of(

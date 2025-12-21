@@ -7,10 +7,12 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * IN-MEMORY BALANCE STORE
  *
- * Phase 3B:
- * - adapter-owned
- * - non-persistent
- * - mutation only after Core PASS
+ * Responsibility:
+ * - Adapter-owned, non-persistent balance storage for testing/diagnostic flows.
+ *
+ * Invariants:
+ * - No persistence guarantees.
+ * - Thread-safe map-backed deltas.
  */
 public final class InMemoryBalanceStore {
 

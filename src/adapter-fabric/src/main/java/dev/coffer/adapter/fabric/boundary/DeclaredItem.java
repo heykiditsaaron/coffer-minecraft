@@ -1,41 +1,38 @@
 package dev.coffer.adapter.fabric.boundary;
 
-import java.util.Optional;
+import java.util.Objects;
 
 /**
- * FABRIC ADAPTER — DECLARED ITEM SHAPE (PHASE 3.B).
+ * FABRIC ADAPTER — DECLARED ITEM
  *
- * This does not assume fungibility.
- * It is a declaration envelope for an item identity as the adapter can justify.
+ * Responsibility:
+ * - Immutable declaration of an item id, quantity, and metadata relevance stance.
  *
- * itemId: platform identifier string (e.g., "minecraft:dirt")
- * count: strictly positive quantity
- *
- * metadataRelevance:
- * - RELEVANT: metadata must be declared (or refuse)
- * - IGNORED_BY_DECLARATION: metadata may be omitted, but the choice must be auditable later
- * - UNDECLARED: must not proceed; adapter should refuse (this exists to prevent guessing)
+ * Invariants:
+ * - itemId non-blank, count > 0, relevance non-null.
+ * - Carries no valuation or mutation meaning.
  */
 public record DeclaredItem(
         String itemId,
-        int count,
+        long count,
         MetadataRelevance metadataRelevance,
-        Optional<DeclaredMetadata> metadata
+        DeclaredMetadata metadata
 ) {
     public DeclaredItem {
-        if (itemId == null || itemId.isBlank()) throw new IllegalArgumentException("itemId must be non-empty");
-        if (count <= 0) throw new IllegalArgumentException("count must be > 0");
-        if (metadataRelevance == null) throw new IllegalArgumentException("metadataRelevance must be non-null");
-        if (metadata == null) throw new IllegalArgumentException("metadata must be non-null (use Optional.empty())");
-
-        itemId = itemId.trim();
+        if (itemId == null || itemId.isBlank()) {
+            throw new IllegalArgumentException("itemId must be non-empty");
+        }
+        if (count <= 0) {
+            throw new IllegalArgumentException("count must be > 0");
+        }
+        Objects.requireNonNull(metadataRelevance, "metadataRelevance");
     }
 
-    public static DeclaredItem withoutMetadata(String itemId, int count, MetadataRelevance relevance) {
-        return new DeclaredItem(itemId, count, relevance, Optional.empty());
-    }
-
-    public static DeclaredItem withMetadata(String itemId, int count, MetadataRelevance relevance, DeclaredMetadata metadata) {
-        return new DeclaredItem(itemId, count, relevance, Optional.ofNullable(metadata));
+    public static DeclaredItem withoutMetadata(
+            String itemId,
+            long count,
+            MetadataRelevance metadataRelevance
+    ) {
+        return new DeclaredItem(itemId, count, metadataRelevance, null);
     }
 }

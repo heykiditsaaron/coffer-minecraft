@@ -1,7 +1,7 @@
 package dev.coffer.adapter.fabric.command;
 
-import dev.coffer.adapter.fabric.CofferFabricRuntime;
 import dev.coffer.adapter.fabric.CofferFabricRefusal;
+import dev.coffer.adapter.fabric.CofferFabricRuntime;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -10,17 +10,14 @@ import net.minecraft.text.Text;
 import java.util.Optional;
 
 /**
- * FABRIC ADAPTER — SHOP COMMAND (PHASE 3.D).
+ * FABRIC ADAPTER — SHOP COMMAND (DIAGNOSTIC)
  *
- * Diagnostic-only entry point for Admin Shop UI access.
- * This command proves:
- * - permission-gated access (stubbed here)
- * - routing through the runtime door
- * - explicit refusal when unavailable
+ * Responsibility:
+ * - Register diagnostic `/shop open` entry.
+ * - Route through runtime door; refuse when not READY.
  *
- * NO UI is opened yet.
- * NO Core calls occur.
- * NO inventory interaction exists.
+ * Not responsible for:
+ * - UI, Core invocation, or permissions (beyond runtime readiness).
  */
 public final class ShopCommandRegistrar {
 
@@ -47,7 +44,6 @@ public final class ShopCommandRegistrar {
                                             return 0;
                                         }
 
-                                        // Phase 3.D (Option A): diagnostic-only acknowledgement.
                                         source.sendFeedback(
                                                 () -> Text.literal(
                                                         "[Coffer] Shop access acknowledged (diagnostic only)."

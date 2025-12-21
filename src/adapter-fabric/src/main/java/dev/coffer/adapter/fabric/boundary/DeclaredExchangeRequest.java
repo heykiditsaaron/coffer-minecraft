@@ -4,12 +4,18 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * FABRIC ADAPTER — DECLARED EXCHANGE REQUEST (PHASE 3.B).
+ * FABRIC ADAPTER — DECLARED EXCHANGE REQUEST
  *
- * This is the adapter-side declaration envelope that will later be translated
- * into Core requests. It contains ONLY declared facts, not inferred meaning.
+ * Responsibility:
+ * - Immutable envelope of declared intent, invoker, target, and items.
  *
- * This file intentionally contains no Fabric imports and no Core imports.
+ * Not responsible for:
+ * - Valuation, policy, or mutation.
+ * - Fabric/Core concerns (keeps imports clean).
+ *
+ * Invariants:
+ * - Facts only; no inferred meaning.
+ * - Defensive copy of items; no null entries.
  */
 public record DeclaredExchangeRequest(
         ExchangeIntent intent,
@@ -23,10 +29,8 @@ public record DeclaredExchangeRequest(
         if (target == null) throw new IllegalArgumentException("target must be non-null");
         if (items == null) throw new IllegalArgumentException("items must be non-null");
 
-        // Defensive copy to preserve immutability expectations.
         items = List.copyOf(items);
 
-        // Prevent null entries (structural integrity only).
         for (DeclaredItem item : items) {
             Objects.requireNonNull(item, "items must not contain null entries");
         }

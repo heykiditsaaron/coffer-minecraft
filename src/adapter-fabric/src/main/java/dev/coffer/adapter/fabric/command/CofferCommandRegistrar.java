@@ -1,7 +1,7 @@
 package dev.coffer.adapter.fabric.command;
 
-import dev.coffer.adapter.fabric.CofferFabricRuntime;
 import dev.coffer.adapter.fabric.CofferFabricRefusal;
+import dev.coffer.adapter.fabric.CofferFabricRuntime;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -9,14 +9,14 @@ import net.minecraft.server.command.ServerCommandSource;
 import java.util.Optional;
 
 /**
- * FABRIC ADAPTER — COMMAND REGISTRAR (PHASE 3.C).
+ * FABRIC ADAPTER — COMMAND REGISTRAR
  *
- * Registers diagnostic commands only.
- * Commands are CALLERS, not owners.
+ * Responsibility:
+ * - Register diagnostic `/coffer` command.
+ * - Route through the runtime door and refuse when not READY.
  *
- * No Core invocation occurs here.
- * All commands route through the Fabric runtime door
- * and must refuse explicitly when not READY.
+ * Not responsible for:
+ * - Core invocation or economic meaning.
  */
 public final class CofferCommandRegistrar {
 

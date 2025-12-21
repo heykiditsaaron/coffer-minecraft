@@ -8,6 +8,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 
+import dev.coffer.adapter.fabric.execution.ExecutionResult;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -25,14 +27,14 @@ public final class InventoryRemovalStep {
         this.mutationContext = Objects.requireNonNull(mutationContext);
     }
 
-    public ApplyResult apply() {
-        if (applied) return ApplyResult.fail("ALREADY_APPLIED");
+    public ExecutionResult apply() {
+        if (applied) return ExecutionResult.fail("ALREADY_APPLIED");
         if (!player.getUuid().equals(mutationContext.targetPlayerId())) {
-            return ApplyResult.fail("PLAYER_MISMATCH");
+            return ExecutionResult.fail("PLAYER_MISMATCH");
         }
 
         for (MutationContext.PlannedRemoval r : mutationContext.plannedRemovals()) {
-            ApplyResult res = applySingle(r);
+            ExecutionResult res = applySingle(r);
             if (!res.success()) {
                 rollbackInternal();
                 return res;
@@ -40,7 +42,7 @@ public final class InventoryRemovalStep {
         }
 
         applied = true;
-        return ApplyResult.ok();
+        return ExecutionResult.ok();
     }
 
     public void rollback() {
@@ -55,9 +57,9 @@ public final class InventoryRemovalStep {
         }
     }
 
-    private ApplyResult applySingle(MutationContext.PlannedRemoval removal) {
+    private ExecutionResult applySingle(MutationContext.PlannedRemoval removal) {
         Item item = resolve(removal.itemId());
-        if (item == null) return ApplyResult.fail("UNKNOWN_ITEM");
+        if (item == null) return ExecutionResult.fail("UNKNOWN_ITEM");
 
         int remaining = removal.quantity();
         remaining = drain(player.getInventory().main, item, remaining);
@@ -65,9 +67,9 @@ public final class InventoryRemovalStep {
         remaining = drain(player.getInventory().offHand, item, remaining);
 
         if (remaining > 0) {
-            return ApplyResult.fail("INSUFFICIENT_ITEMS");
+            return ExecutionResult.fail("INSUFFICIENT_ITEMS");
         }
-        return ApplyResult.ok();
+        return ExecutionResult.ok();
     }
 
     private int drain(DefaultedList<ItemStack> list, Item item, int remaining) {
@@ -89,16 +91,6 @@ public final class InventoryRemovalStep {
             return Registries.ITEM.get(Identifier.of(id));
         } catch (Exception e) {
             return null;
-        }
-    }
-
-    public record ApplyResult(boolean success, String reason) {
-        public static ApplyResult ok() {
-            return new ApplyResult(true, null);
-        }
-
-        public static ApplyResult fail(String reason) {
-            return new ApplyResult(false, Objects.requireNonNull(reason));
         }
     }
 

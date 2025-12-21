@@ -4,21 +4,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * BALANCE CREDIT PLAN — PHASE 3D.3
+ * BALANCE CREDIT PLAN
  *
- * Adapter-owned, immutable credit intent.
+ * Responsibility:
+ * - Immutable credit intent derived from planned, accepted value.
  *
- * This plan represents the exact balance credit the adapter intends to apply
- * if (and only if) atomic mutation proceeds after Core PASS and binding checks.
- *
- * Rules:
- * - Built ONLY from adapter-verified truth (and already-established valuation outputs)
- * - Immutable once created
- * - Never inferred or recomputed during execution
- * - Opaque to Core
- *
- * Contains NO behavior.
- * Persistence is explicitly out of scope for Phase 3D.3.
+ * Invariants:
+ * - Player id non-null; creditAmount > 0.
+ * - No behavior; opaque to Core.
  */
 public final class BalanceCreditPlan {
 

@@ -5,20 +5,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * MUTATION CONTEXT — PHASE 3D.2
+ * MUTATION CONTEXT
  *
- * Adapter-owned, immutable execution plan.
+ * Responsibility:
+ * - Immutable adapter-owned execution plan for inventory removals.
  *
- * This context represents the exact mutation the adapter intends
- * to perform if (and only if) Core evaluation allows it.
- *
- * Rules:
- * - Built ONLY from adapter-verified truth
- * - Immutable once created
- * - Never inferred or reconstructed
- * - Opaque to Core
- *
- * This class contains NO behavior.
+ * Invariants:
+ * - Built only from adapter-verified truth.
+ * - targetPlayerId non-null; plannedRemovals non-empty and defensive copy.
  */
 public final class MutationContext {
 
@@ -49,8 +43,6 @@ public final class MutationContext {
 
     /**
      * Represents a single, explicit inventory removal plan.
-     *
-     * This does NOT imply success, only intent.
      */
     public static final class PlannedRemoval {
 

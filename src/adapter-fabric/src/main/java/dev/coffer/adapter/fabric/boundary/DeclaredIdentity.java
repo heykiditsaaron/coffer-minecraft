@@ -1,29 +1,26 @@
 package dev.coffer.adapter.fabric.boundary;
 
-import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * FABRIC ADAPTER — IDENTITY SHAPE ONLY (PHASE 3.B).
+ * FABRIC ADAPTER — DECLARED IDENTITY
  *
- * Identity is declared as facts, not inferred meaning.
- * UUID is the stable identifier; name is optional and non-authoritative.
+ * Responsibility:
+ * - Immutable representation of the target identity for an exchange.
+ *
+ * Not responsible for:
+ * - Permissions, policy, or platform resolution beyond holding an id.
+ *
+ * Invariants:
+ * - UUID must be non-null.
  */
-public record DeclaredIdentity(
-        UUID uuid,
-        Optional<String> name
-) {
+public record DeclaredIdentity(UUID id) {
     public DeclaredIdentity {
-        if (uuid == null) throw new IllegalArgumentException("uuid must be non-null");
-        if (name == null) throw new IllegalArgumentException("name must be non-null (use Optional.empty())");
-        name = name.map(String::trim).filter(s -> !s.isBlank());
+        Objects.requireNonNull(id, "id");
     }
 
-    public static DeclaredIdentity of(UUID uuid) {
-        return new DeclaredIdentity(uuid, Optional.empty());
-    }
-
-    public static DeclaredIdentity of(UUID uuid, String name) {
-        return new DeclaredIdentity(uuid, Optional.ofNullable(name));
+    public static DeclaredIdentity of(UUID id) {
+        return new DeclaredIdentity(id);
     }
 }

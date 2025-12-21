@@ -6,19 +6,14 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * VALUATION CONFIG — PHASE 3C.3
+ * VALUATION CONFIG
  *
- * Adapter-local valuation configuration.
+ * Responsibility:
+ * - Explicit per-item valuation data for the adapter.
  *
- * Rules:
- * - Items have no value unless explicitly listed.
- * - Any value <= 0 means the item is NOT a participant in the economy.
- * - No defaults are inferred.
- * - Zero-config boots and denies all valuation honestly.
- *
- * NOTE:
- * - File-backed loading is deferred by design.
- * - This is a pure data structure.
+ * Invariants:
+ * - Items have no value unless listed.
+ * - value <= 0 means the item is not a participant.
  */
 public final class ValuationConfig {
 
@@ -28,25 +23,15 @@ public final class ValuationConfig {
         this.valueByItemId = Collections.unmodifiableMap(new HashMap<>(valueByItemId));
     }
 
-    /**
-     * Zero-config configuration.
-     * All items are unvalued and will be denied.
-     */
     public static ValuationConfig empty() {
         return new ValuationConfig(Map.of());
     }
 
-    /**
-     * Returns the configured value for an itemId, or null if unlisted.
-     */
     public Long getValueForItem(String itemId) {
         Objects.requireNonNull(itemId, "itemId");
         return valueByItemId.get(itemId);
     }
 
-    /**
-     * Builder for future extension (e.g., file-backed config).
-     */
     public static Builder builder() {
         return new Builder();
     }

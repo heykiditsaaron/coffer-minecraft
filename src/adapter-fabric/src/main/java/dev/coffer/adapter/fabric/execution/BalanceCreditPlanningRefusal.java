@@ -3,17 +3,10 @@ package dev.coffer.adapter.fabric.execution;
 import java.util.Objects;
 
 /**
- * BALANCE CREDIT PLANNING REFUSAL — PHASE 3D.4
+ * BALANCE CREDIT PLANNING REFUSAL
  *
- * Represents an explicit, non-punitive reason why a BalanceCreditPlan
- * could not be produced from a Core evaluation result.
- *
- * Rules:
- * - No guessing: refusals must be factual and boring.
- * - No punishment: refusal is not a fault and not an exception.
- * - Adapter-owned: this is for UI/command messaging and auditability.
- *
- * This type contains NO behavior.
+ * Responsibility:
+ * - Explicit, non-punitive reason why credit planning could not proceed.
  */
 public final class BalanceCreditPlanningRefusal {
 

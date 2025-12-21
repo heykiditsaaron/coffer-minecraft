@@ -14,16 +14,14 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * FABRIC VALUATION SERVICE — PHASE 3C.3
+ * FABRIC VALUATION SERVICE
  *
- * Adapter-side valuation implementation.
+ * Responsibility:
+ * - Adapter-owned valuation: explicit values only, deny-by-default.
  *
- * Rules:
- * - Items have no value unless explicitly configured
- * - value <= 0 means item is NOT a participant in the economy
- * - No guessing
- * - No mutation
- * - Core determines final accept/deny
+ * Invariants:
+ * - Items not listed or <=0 value are rejected with INVALID_VALUE.
+ * - No mutation or guessing.
  */
 public final class FabricValuationService implements ValuationService {
 
@@ -40,7 +38,6 @@ public final class FabricValuationService implements ValuationService {
         Object payload = request.payload();
 
         if (!(payload instanceof DeclaredExchangeRequest declared)) {
-            // Structural mismatch — Core will interpret this as invalid
             return new ValuationSnapshot(List.of());
         }
 
@@ -53,7 +50,7 @@ public final class FabricValuationService implements ValuationService {
             if (unitValue == null || unitValue <= 0) {
                 results.add(
                         ValuationItemResult.rejected(
-                                item,                // opaque subject
+                                item,
                                 quantity,
                                 DenialReason.INVALID_VALUE
                         )
@@ -63,7 +60,7 @@ public final class FabricValuationService implements ValuationService {
 
                 results.add(
                         ValuationItemResult.accepted(
-                                item,                // opaque subject
+                                item,
                                 quantity,
                                 totalValue
                         )

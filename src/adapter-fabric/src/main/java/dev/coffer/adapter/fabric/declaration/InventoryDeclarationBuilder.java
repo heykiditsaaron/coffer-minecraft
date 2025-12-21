@@ -19,13 +19,22 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * INVENTORY DECLARATION BUILDER — PHASE 3C.2.A
+ * INVENTORY DECLARATION BUILDER
  *
- * Constructs truthful adapter-side exchange declarations from authoritative
- * player-owned inventory state with explicit, configurable metadata relevance.
+ * Responsibility:
+ * - Observe player-owned inventory surfaces.
+ * - Aggregate identical items deterministically (respecting metadata stance).
+ * - Build a truthful DeclaredExchangeRequest or refuse (empty).
  *
- * Default stance (Option 2):
- * - Metadata is IGNORED_BY_DECLARATION unless explicitly configured otherwise.
+ * Not responsible for:
+ * - Valuation, policy, or mutation.
+ * - UI selection state (reads authoritative player inventory only).
+ * - Metadata parsing (only stance resolution).
+ *
+ * Invariants:
+ * - Only owned items are declared.
+ * - Metadata relevance is explicit; unknown relevance causes refusal.
+ * - Absence of eligible items returns empty (refusal before Core).
  */
 public final class InventoryDeclarationBuilder {
 
@@ -38,10 +47,10 @@ public final class InventoryDeclarationBuilder {
     }
 
     /**
-     * Attempts to construct a truthful DeclaredExchangeRequest based solely
+     * Attempt to construct a truthful DeclaredExchangeRequest based solely
      * on what the player actually owns at the time of invocation.
      *
-     * Absence is a valid and honest outcome.
+     * Absence is a valid and honest outcome (empty Optional).
      */
     public static Optional<DeclaredExchangeRequest> fromPlayer(ServerPlayerEntity player) {
         if (player == null) {
@@ -82,8 +91,7 @@ public final class InventoryDeclarationBuilder {
 
             DeclaredItem declared;
             if (key.relevance == MetadataRelevance.RELEVANT) {
-                // Phase 3C.2.A: metadata relevance is explicit,
-                // but metadata extraction itself is deferred.
+                // Metadata relevance is explicit, but metadata extraction is deferred.
                 // If relevance is REQUIRED, but we cannot declare metadata yet, we refuse.
                 return Optional.empty();
             } else {
@@ -125,7 +133,7 @@ public final class InventoryDeclarationBuilder {
     }
 
     /**
-     * Aggregation key for Phase 3C.2.A.
+     * Aggregation key for deterministic grouping.
      *
      * NOTE:
      * - When metadata becomes declared (RELEVANT with metadata snapshot),

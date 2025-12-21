@@ -8,29 +8,28 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class FabricMutationExecutor {
+/**
+ * FABRIC MUTATION TRANSACTION EXECUTOR
+ *
+ * Responsibility:
+ * - Bind Core PASS, MutationContext, and BalanceCreditPlan to the same player.
+ * - Run atomic mutation transaction (inventory removal + balance credit).
+ *
+ * Invariants:
+ * - No mutation if Core denied.
+ * - Player identity must match across evaluation, mutation context, and credit plan.
+ * - All-or-nothing execution via MutationTransaction.
+ */
+public final class FabricMutationTransactionExecutor {
 
     private final InMemoryBalanceStore balanceStore;
 
-    public FabricMutationExecutor() {
+    public FabricMutationTransactionExecutor() {
         this(new InMemoryBalanceStore());
     }
 
-    public FabricMutationExecutor(InMemoryBalanceStore balanceStore) {
+    public FabricMutationTransactionExecutor(InMemoryBalanceStore balanceStore) {
         this.balanceStore = Objects.requireNonNull(balanceStore, "balanceStore");
-    }
-
-    public void execute(
-            ServerPlayerEntity targetPlayer,
-            ExchangeEvaluationResult evaluationResult,
-            MutationContext mutationContext
-    ) {
-        Objects.requireNonNull(targetPlayer);
-        Objects.requireNonNull(evaluationResult);
-        Objects.requireNonNull(mutationContext);
-
-        if (!evaluationResult.allowed()) return;
-        if (!targetPlayer.getUuid().equals(mutationContext.targetPlayerId())) return;
     }
 
     public ExecutionResult executeAtomic(
@@ -67,22 +66,12 @@ public final class FabricMutationExecutor {
         MutationTransaction tx =
                 new MutationTransaction(playerId, inventoryStep, balanceStep);
 
-        MutationTransaction.Result txResult = tx.execute();
+        ExecutionResult txResult = tx.execute();
 
         if (!txResult.success()) {
             return ExecutionResult.fail(txResult.reason());
         }
 
         return ExecutionResult.ok();
-    }
-
-    public record ExecutionResult(boolean success, String reason) {
-        public static ExecutionResult ok() {
-            return new ExecutionResult(true, null);
-        }
-
-        public static ExecutionResult fail(String reason) {
-            return new ExecutionResult(false, Objects.requireNonNull(reason));
-        }
     }
 }

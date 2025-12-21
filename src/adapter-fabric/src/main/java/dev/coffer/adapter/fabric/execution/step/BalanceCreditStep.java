@@ -1,6 +1,7 @@
 package dev.coffer.adapter.fabric.execution.step;
 
 import dev.coffer.adapter.fabric.execution.BalanceCreditPlan;
+import dev.coffer.adapter.fabric.execution.ExecutionResult;
 import dev.coffer.adapter.fabric.execution.InMemoryBalanceStore;
 
 import java.util.Objects;
@@ -19,17 +20,17 @@ public final class BalanceCreditStep {
         this.plan = Objects.requireNonNull(plan);
     }
 
-    public ApplyResult apply(UUID playerId) {
-        if (applied) return ApplyResult.fail("ALREADY_APPLIED");
+    public ExecutionResult apply(UUID playerId) {
+        if (applied) return ExecutionResult.fail("ALREADY_APPLIED");
         if (!plan.targetPlayerId().equals(playerId)) {
-            return ApplyResult.fail("PLAYER_MISMATCH");
+            return ExecutionResult.fail("PLAYER_MISMATCH");
         }
 
         delta = plan.creditAmount();
         store.applyDelta(playerId, delta);
         applied = true;
 
-        return ApplyResult.ok();
+        return ExecutionResult.ok();
     }
 
     public void rollback(UUID playerId) {
@@ -37,15 +38,5 @@ public final class BalanceCreditStep {
         store.applyDelta(playerId, -delta);
         applied = false;
         delta = 0;
-    }
-
-    public record ApplyResult(boolean success, String reason) {
-        public static ApplyResult ok() {
-            return new ApplyResult(true, null);
-        }
-
-        public static ApplyResult fail(String reason) {
-            return new ApplyResult(false, Objects.requireNonNull(reason));
-        }
     }
 }

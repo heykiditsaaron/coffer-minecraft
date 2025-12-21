@@ -24,24 +24,24 @@ public final class MutationTransaction {
         this.balanceStep = Objects.requireNonNull(balanceStep);
     }
 
-    public Result execute() {
+    public ExecutionResult execute() {
         if (executed) {
-            return Result.fail("TRANSACTION_ALREADY_EXECUTED");
+            return ExecutionResult.fail("TRANSACTION_ALREADY_EXECUTED");
         }
         executed = true;
 
-        InventoryRemovalStep.ApplyResult inv = inventoryStep.apply();
+        ExecutionResult inv = inventoryStep.apply();
         if (!inv.success()) {
-            return Result.fail("INVENTORY_REMOVAL_FAILED: " + inv.reason());
+            return ExecutionResult.fail("INVENTORY_REMOVAL_FAILED: " + inv.reason());
         }
 
-        BalanceCreditStep.ApplyResult bal = balanceStep.apply(targetPlayerId);
+        ExecutionResult bal = balanceStep.apply(targetPlayerId);
         if (!bal.success()) {
             inventoryStep.rollback();
-            return Result.fail("BALANCE_CREDIT_FAILED: " + bal.reason());
+            return ExecutionResult.fail("BALANCE_CREDIT_FAILED: " + bal.reason());
         }
 
-        return Result.ok();
+        return ExecutionResult.ok();
     }
 
     public void rollback() {
@@ -49,13 +49,4 @@ public final class MutationTransaction {
         inventoryStep.rollback();
     }
 
-    public record Result(boolean success, String reason) {
-        public static Result ok() {
-            return new Result(true, null);
-        }
-
-        public static Result fail(String reason) {
-            return new Result(false, Objects.requireNonNull(reason));
-        }
-    }
 }

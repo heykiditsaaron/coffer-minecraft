@@ -4,20 +4,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * BALANCE CREDIT PLANNING RESULT — PHASE 3D.4
+ * BALANCE CREDIT PLANNING RESULT
  *
- * Explicit outcome of attempting to construct a BalanceCreditPlan from:
- * - Core evaluation result
- * - Core valuation snapshot
- * - adapter-owned identity binding
- *
- * This result is designed to be:
- * - honest (no guessing)
- * - non-punitive (refusal is expected)
- * - UI-friendly (reason is explicit)
- * - audit-friendly (codes are stable)
- *
- * This type contains NO behavior beyond safe construction.
+ * Responsibility:
+ * - Hold either a planned BalanceCreditPlan or an explicit refusal.
  */
 public final class BalanceCreditPlanningResult {
 

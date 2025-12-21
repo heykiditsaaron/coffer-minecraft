@@ -1,35 +1,45 @@
 package dev.coffer.adapter.fabric.command;
 
+import dev.coffer.adapter.fabric.CofferFabricRefusal;
+import dev.coffer.adapter.fabric.CofferFabricRuntime;
 import dev.coffer.adapter.fabric.boundary.DeclaredExchangeRequest;
-import dev.coffer.adapter.fabric.boundary.DeclaredIdentity;
 import dev.coffer.adapter.fabric.boundary.DeclaredItem;
-import dev.coffer.adapter.fabric.boundary.ExchangeIntent;
-import dev.coffer.adapter.fabric.boundary.InvocationContext;
-import dev.coffer.adapter.fabric.boundary.MetadataRelevance;
+import dev.coffer.adapter.fabric.declaration.InventoryDeclarationBuilder;
+import dev.coffer.adapter.fabric.execution.BalanceCreditPlan;
+import dev.coffer.adapter.fabric.execution.BalanceCreditPlanner;
+import dev.coffer.adapter.fabric.execution.BalanceCreditPlanningResult;
 import dev.coffer.adapter.fabric.execution.FabricCoreExecutor;
-import dev.coffer.adapter.fabric.execution.FabricMutationExecutor;
+import dev.coffer.adapter.fabric.execution.FabricMutationTransactionExecutor;
 import dev.coffer.adapter.fabric.execution.MutationContext;
 import dev.coffer.core.ExchangeEvaluationResult;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.item.Items;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
- * SELL COMMAND — PHASE 3D.2
+ * SELL COMMAND
  *
- * This command constructs an adapter-owned MutationContext to prevent
- * mutation execution from reconstructing or guessing what should be mutated.
+ * Responsibility:
+ * - Entry surface only; delegates declaration, evaluation, planning, execution.
+ * - Surfaces explicit, calm feedback.
  *
- * IMPORTANT:
- * - This command still uses a placeholder declared exchange request for now.
- * - Phase 3D.2 performs NO mutation.
- * - This phase only proves truthful ownership gating + execution binding.
+ * Not responsible for:
+ * - Building declarations (uses InventoryDeclarationBuilder).
+ * - Planning credit (uses BalanceCreditPlanner).
+ * - Performing mutation (uses FabricMutationTransactionExecutor).
+ *
+ * Invariants:
+ * - Refuses if runtime not READY.
+ * - No mutation without Core PASS, planned credit, and matching identities.
+ * - Absence of eligible items is a calm, non-error outcome.
  */
 public final class SellCommandRegistrar {
 
@@ -37,13 +47,16 @@ public final class SellCommandRegistrar {
         // static-only
     }
 
-    public static void register(FabricCoreExecutor executor) {
-        FabricMutationExecutor mutationExecutor = new FabricMutationExecutor();
+    public static void register(FabricCoreExecutor coreExecutor) {
+        Objects.requireNonNull(coreExecutor, "coreExecutor");
+
+        FabricMutationTransactionExecutor mutationExecutor = new FabricMutationTransactionExecutor();
+        BalanceCreditPlanner creditPlanner = new BalanceCreditPlanner();
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 dispatcher.register(
                         CommandManager.literal("sell")
-                                .executes(ctx -> execute(ctx.getSource(), executor, mutationExecutor))
+                                .executes(ctx -> execute(ctx.getSource(), coreExecutor, mutationExecutor, creditPlanner))
                 )
         );
     }
@@ -51,68 +64,83 @@ public final class SellCommandRegistrar {
     private static int execute(
             ServerCommandSource source,
             FabricCoreExecutor coreExecutor,
-            FabricMutationExecutor mutationExecutor
+            FabricMutationTransactionExecutor mutationExecutor,
+            BalanceCreditPlanner creditPlanner
     ) {
         ServerPlayerEntity player = source.getPlayer();
-
         if (player == null) {
             source.sendError(Text.literal("[Coffer] Players only."));
             return 0;
         }
 
-        UUID playerId = player.getUuid();
+        Optional<CofferFabricRefusal> readiness =
+                CofferFabricRuntime.getIfPresent()
+                        .flatMap(CofferFabricRuntime::refuseIfNotReady);
 
-        // PHASE 3D.2: adapter-truth ownership gating (minimal, explicit, placeholder-aligned)
-        //
-        // For now, the declared request still references a single dirt item.
-        // Therefore the mutation plan must also be derived from owned inventory truth for dirt,
-        // otherwise we refuse to proceed (no truthful exchange exists).
-        int ownedDirtCount = player.getInventory().count(Items.DIRT);
-        if (ownedDirtCount <= 0) {
-            source.sendError(Text.literal("[Coffer] Nothing to sell (no owned items eligible)."));
+        if (readiness.isPresent()) {
+            source.sendError(Text.literal("[Coffer] " + readiness.get().message()));
             return 0;
         }
 
-        MutationContext mutationContext =
-                new MutationContext(
-                        playerId,
-                        List.of(
-                                new MutationContext.PlannedRemoval("minecraft:dirt", 1)
-                        )
-                );
+        Optional<DeclaredExchangeRequest> maybeRequest =
+                InventoryDeclarationBuilder.fromPlayer(player);
 
-        // Placeholder declaration — inventory-backed selection comes later (Phase 3C.2 / sell menu)
-        DeclaredExchangeRequest request =
-                new DeclaredExchangeRequest(
-                        ExchangeIntent.SELL,
-                        InvocationContext.player(playerId),
-                        DeclaredIdentity.of(playerId),
-                        List.of(
-                                DeclaredItem.withoutMetadata(
-                                        "minecraft:dirt",
-                                        1,
-                                        MetadataRelevance.IGNORED_BY_DECLARATION
-                                )
-                        )
-                );
-
-        ExchangeEvaluationResult result = coreExecutor.execute(request);
-
-        if (!result.allowed()) {
-            source.sendError(Text.literal("[Coffer] Denied."));
-            return 0;
+        if (maybeRequest.isEmpty()) {
+            source.sendFeedback(() -> Text.literal("[Coffer] Nothing to sell right now."), false);
+            return 1;
         }
 
-        // PHASE 3D.2:
-        // Reach execution boundary WITH an explicit, adapter-owned mutation plan.
-        // Still no real mutation occurs.
-        mutationExecutor.execute(player, result, mutationContext);
+        DeclaredExchangeRequest request = maybeRequest.get();
+
+        ExchangeEvaluationResult evaluationResult = coreExecutor.execute(request);
+
+        if (!evaluationResult.allowed()) {
+            source.sendFeedback(() -> Text.literal("[Coffer] Denied. No changes were made."), false);
+            return 1;
+        }
+
+        BalanceCreditPlanningResult planningResult =
+                creditPlanner.plan(player.getUuid(), evaluationResult);
+
+        if (!planningResult.planned()) {
+            String message = planningResult.refusal()
+                    .map(r -> r.message())
+                    .orElse("Unable to plan credit. No changes were made.");
+            source.sendFeedback(() -> Text.literal("[Coffer] " + message), false);
+            return 1;
+        }
+
+        BalanceCreditPlan creditPlan = planningResult.plan().orElseThrow();
+
+        MutationContext mutationContext = toMutationContext(player.getUuid(), request);
+
+        var execResult =
+                mutationExecutor.executeAtomic(player, evaluationResult, mutationContext, creditPlan);
+
+        if (!execResult.success()) {
+            source.sendFeedback(
+                    () -> Text.literal("[Coffer] No changes were made (" + execResult.reason() + ")."),
+                    false
+            );
+            return 1;
+        }
 
         source.sendFeedback(
-                () -> Text.literal("[Coffer] Exchange execution reached. No changes were made."),
+                () -> Text.literal("[Coffer] Sold."),
                 false
         );
-
         return 1;
+    }
+
+    private static MutationContext toMutationContext(UUID playerId, DeclaredExchangeRequest request) {
+        List<MutationContext.PlannedRemoval> removals = new ArrayList<>();
+        for (DeclaredItem item : request.items()) {
+            if (item.count() <= 0) {
+                continue;
+            }
+            int qty = Math.toIntExact(item.count());
+            removals.add(new MutationContext.PlannedRemoval(item.itemId(), qty));
+        }
+        return new MutationContext(playerId, removals);
     }
 }
