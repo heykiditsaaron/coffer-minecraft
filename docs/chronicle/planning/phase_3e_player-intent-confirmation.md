@@ -162,6 +162,45 @@ Those belong to later phases.
 
 ---
 
+## Explicit Non-Goals (Clarified During Planning)
+
+Phase 3E also does NOT attempt to:
+
+- Guarantee execution after confirmation
+- Persist intent confirmations across restarts
+- Re-evaluate valuation at confirmation time
+- Reduce refusal frequency
+- Teach valuation rules mid-flow
+- Optimize for “successful” outcomes
+- Replace refusal with accommodation
+
+Phase 3E exists solely to enable **honest consent**.
+
+---
+
+## Intent Confirmation — Invalidation Conditions (Conceptual)
+
+An **Intent Confirmation** is automatically invalid if **any** of the following
+change prior to execution:
+
+- Player inventory state (identity, quantity, metadata relevance)
+- Player identity or invocation context
+- Core valuation inputs or policy configuration
+- Adapter-owned mutation plan
+- Adapter-owned balance credit plan
+- Server restart or adapter reload
+- Any authoritative state required to re-establish the same outcome
+
+Invalidation results in:
+- no mutation
+- no partial application
+- no penalty
+- no reinterpretation
+
+The system simply refuses to proceed.
+
+---
+
 ## Open Questions (To Be Resolved During Phase)
 
 - How is inventory selection surfaced safely?
@@ -186,6 +225,9 @@ Phase 3E will be considered successful when:
 - Admins are not required to explain behavior
 - The system remains honest without supervision
 
+No specific UI, storage, or execution mechanism
+is required for Phase 3E to be considered complete.
+
 Only then may a **final Phase 3E chronicle** be written.
 
 ---
@@ -204,6 +246,7 @@ All binding truth for Phase 3E will live in the
 final chronicle written after a successful build.
 
 ---
+
 ### Annotation — Intent Confirmation Term
 
 During Phase 3E planning, the term **Intent Confirmation** was introduced

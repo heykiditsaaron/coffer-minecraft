@@ -171,6 +171,41 @@ Intent Confirmation is agreement to outcome, not agreement to rules.
 
 ---
 
+### Metadata Relevance Policy
+
+**Metadata Relevance Policy** is an adapter-owned, auditable policy that determines
+how item metadata (including NBT) is treated during declaration, valuation, and
+exchange evaluation.
+
+This policy explicitly defines whether metadata is:
+
+- **REQUIRED** — metadata must be declared and evaluated for honesty
+- **IGNORED** — metadata is deliberately excluded from consideration
+- **UNDECLARED** — metadata relevance is unknown and therefore unsafe
+
+Ignoring metadata is **never implicit**.
+
+When metadata is ignored, it is the result of an **explicit administrative choice**,
+not a convenience default or fallback behavior. This choice must be auditable and
+visible in system configuration or documentation.
+
+If metadata relevance cannot be established honestly, the system **refuses**
+the interaction rather than guessing or approximating.
+
+The Metadata Relevance Policy exists to:
+- reduce administrative tedium where metadata is not meaningful,
+- prevent silent loss of truth when metadata *is* meaningful,
+- and preserve honesty as a system responsibility rather than a human burden.
+
+This policy affects declaration and evaluation only.
+It does not grant additional permissiveness beyond declared economic rules,
+and it does not override refusal semantics.
+
+Metadata relevance is resolved **before execution** and is immutable for the
+lifetime of an evaluated exchange.
+
+---
+
 ## Mutation
 
 A real-world change resulting from a permitted exchange.
