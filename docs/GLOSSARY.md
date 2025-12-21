@@ -171,6 +171,37 @@ Intent Confirmation is agreement to outcome, not agreement to rules.
 
 ---
 
+## Intent Preview
+
+**Intent Preview**  
+A server-owned, non-mutating projection of the exact outcome that *would* occur if a player’s expressed intent were confirmed under the current conditions.
+
+An Intent Preview is:
+
+- **Frozen** — bound to a specific moment in time and state
+- **Explicit** — clearly shows what would be accepted, rejected, and credited
+- **Non-mutating** — performs no inventory, balance, or world changes
+- **Honest** — refuses to exist if truth cannot be established
+- **Invalidatable** — becomes unusable if relevant reality changes (inventory, configuration, reload, etc.)
+
+An Intent Preview exists to answer a single question:
+
+> *“If I confirm this intent right now, what exactly will happen?”*
+
+It does **not**:
+- remove items,
+- credit currency,
+- reserve inventory,
+- infer missing information,
+- guarantee future validity,
+- or negotiate outcomes.
+
+An Intent Preview must either reflect the truth completely or refuse to be created.
+
+Intent Preview precedes and enables **Intent Confirmation**, forming a deliberate trust boundary between player intent and system mutation.
+
+---
+
 ### Metadata Relevance Policy
 
 **Metadata Relevance Policy** is an adapter-owned, auditable policy that determines

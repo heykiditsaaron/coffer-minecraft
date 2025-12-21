@@ -35,6 +35,9 @@ Phase 3E exists to answer one question only:
 This phase **does not determine truth**.  
 It **reveals truth** that already exists.
 
+In glossary terms, Phase 3E is responsible for the creation and presentation of an
+**Intent Preview**, and the handling of **Intent Confirmation**.
+
 ---
 
 ## Core Objectives (Reaffirmed)
@@ -63,7 +66,9 @@ Phase 3E may read the following adapter-owned outputs:
 - Explicit refusal codes and messages
 - Adapter-owned identity bindings
 
-These inputs are:
+These inputs collectively form the factual basis for an **Intent Preview**.
+
+They are:
 - already validated
 - already frozen
 - already honest
@@ -92,7 +97,8 @@ UX must never become a logic source.
 
 ## UX Semantics (Intent-Level)
 
-The UX produced in Phase 3E should communicate:
+The UX produced in Phase 3E should communicate the contents of an
+**Intent Preview**, including:
 
 - What items are accepted
 - What items are rejected
@@ -113,7 +119,7 @@ The tone must be:
 
 ## Confirmation Semantics
 
-Confirmation in Phase 3E represents:
+Confirmation in Phase 3E represents **Intent Confirmation**, meaning:
 
 > “I agree to this exact outcome.”
 
@@ -122,6 +128,9 @@ It does NOT represent:
 - agreement to hidden rules
 - acceptance of risk
 - acknowledgment of fault
+
+Intent Confirmation binds the player to a specific **Intent Preview**.
+It does not negotiate, reinterpret, or re-evaluate that preview.
 
 Once confirmed, execution may proceed using
 already-frozen intent (Phase 3D.3 + 3D.4).
@@ -247,16 +256,19 @@ final chronicle written after a successful build.
 
 ---
 
-### Annotation — Intent Confirmation Term
+### Annotation — Intent Preview & Intent Confirmation
 
-During Phase 3E planning, the term **Intent Confirmation** was introduced
-and added to the project glossary.
+During Phase 3E planning, the glossary terms **Intent Preview** and
+**Intent Confirmation** were introduced to stabilize language.
 
-This term names the server-owned, non-mutating artifact used to present a
-fully evaluated outcome to a player for consent prior to execution.
+- **Intent Preview** names the server-owned, non-mutating projection of a
+  fully evaluated outcome presented to a player.
+- **Intent Confirmation** names the player’s explicit consent to that exact
+  previewed outcome prior to execution.
 
-The introduction of this term does not expand Phase 3E scope.
-It exists to stabilize language and prevent ambiguity in future discussion.
+The introduction of these terms does not expand Phase 3E scope.
+They exist solely to prevent ambiguity and preserve conceptual integrity
+during implementation.
 
 ---
 
