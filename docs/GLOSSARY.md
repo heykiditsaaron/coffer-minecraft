@@ -62,6 +62,48 @@ The Core emits audits; adapters decide where they go.
 
 ---
 
+## Balance Credit
+
+An explicit mutation that increases a player’s currency balance.
+
+Balance credit may occur only through an authorized mutation surface
+(e.g. admin command, system reward, or approved integration) and must be:
+- intentional,
+- auditable,
+- and non-inferential.
+
+Balance credit is never implied by UI interaction alone and never occurs
+as a side effect of evaluation or preview.
+
+---
+
+## Balance Debit
+
+An explicit mutation that decreases a player’s currency balance.
+
+Balance debit follows the same constraints as balance credit:
+- explicit intent,
+- authorized surface,
+- auditable execution,
+- and no inference.
+
+Balance debit is never speculative and never performed implicitly.
+
+---
+
+## Balance Query
+
+A read-only operation that reveals a player’s current currency balance.
+
+Balance queries:
+- do not mutate state,
+- do not imply permission to mutate,
+- and do not require economic evaluation.
+
+Balance queries may be exposed via commands or APIs and may be subject
+to external permission systems.
+
+
 ## Chronicle
 
 A witnessed record of what was built, learned, or discovered
@@ -73,6 +115,20 @@ Chronicles:
 - do not rewrite Core law or prior chronicles.
 
 Chronicles preserve institutional memory.
+
+---
+
+## Command Surface
+
+The set of player- or system-invokable commands that interact with Coffer.
+
+The command surface:
+- expresses *intent*, not authority,
+- never substitutes for server truth,
+- and never performs implicit mutation.
+
+Commands may open exploration flows, request evaluation, or request mutation,
+but mutation only occurs after explicit confirmation and authorization.
 
 ---
 
@@ -89,6 +145,22 @@ The Core:
 
 ---
 
+
+## Currency
+
+A unit of account managed by Coffer to represent economic value.
+
+Each currency is defined by:
+- a unique identity,
+- an admin-configured name and pluralization,
+- an optional symbol,
+- and a configured precision (decimal places).
+
+Currencies do not define conversion logic.
+Conversion, if desired, must be implemented externally.
+
+---
+
 ## Decoration
 
 Adapter-local presentation of canonical system outcomes
@@ -102,6 +174,15 @@ Decoration:
 
 Decoration is **not** reinterpretation, suppression, or judgment.
 It exists solely to render outcomes humane without weakening truth.
+
+---
+
+## Default Currency
+
+The primary currency used by a server when no specific currency is specified.
+
+The default currency is explicitly configured by administrators.
+There is no implicit or system-defined default.
 
 ---
 
@@ -171,6 +252,20 @@ Intent Confirmation is agreement to outcome, not agreement to rules.
 
 ---
 
+## Intent Exploration
+
+A safe, non-mutating interaction in which a player indicates interest
+in a potential economic action.
+
+Intent exploration:
+- never removes items,
+- never grants or removes currency,
+- and never commits to an outcome.
+
+Its purpose is to allow learning and understanding without risk.
+
+---
+
 ## Intent Preview
 
 **Intent Preview**  
@@ -237,6 +332,16 @@ lifetime of an evaluated exchange.
 
 ---
 
+## Multi-Currency (Deferred)
+
+The capability for Coffer to manage more than one currency simultaneously.
+
+Multi-currency support is an intentional design goal but is deferred
+beyond MVP. All current systems must avoid assumptions that would
+prevent its future introduction.
+
+---
+
 ## Mutation
 
 A real-world change resulting from a permitted exchange.
@@ -284,6 +389,28 @@ Truthful declarations:
 - and may exclude elements that cannot be declared honestly.
 
 ---
+
+
+## Server Authority
+
+The principle that the server is the sole source of truth for ownership,
+balance, and mutation.
+
+No client-side UI, command, or interaction is authoritative by itself.
+All truth is derived from server-controlled data.
+
+---
+
+## UI as Non-Authority
+
+The explicit rule that user interfaces are communicative, not authoritative.
+
+UI elements may:
+- display intent,
+- preview outcomes,
+- and request confirmation,
+
+but they never establish ownership, permission, or mutation by themselves.
 
 ## Valuation
 
