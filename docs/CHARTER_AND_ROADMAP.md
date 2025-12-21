@@ -360,4 +360,6 @@ If this document appears incomplete, optimistic, or imprecise:
 Truth, refusal semantics, and execution discipline
 are defined by the Law, the Adapter Contract, and the Chronicles.
 
+Phase sequencing may be intentionally paused when new architectural truth emerges.
+
 This document is a map — not the terrain.

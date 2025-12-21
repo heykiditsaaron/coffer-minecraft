@@ -152,6 +152,91 @@ The Core does not interpret platform meaning inside the request.
 
 ---
 
+### Intent Confirmation
+
+An **Intent Confirmation** is a server-owned, non-mutating representation of a
+specific, fully evaluated outcome that *could* occur if execution were to proceed.
+
+It exists to allow a player to knowingly consent to an exact result **without
+committing mutation**.
+
+An Intent Confirmation:
+- is derived solely from authoritative server state,
+- describes exactly what would happen if executed,
+- may be invalidated at any time if truth changes,
+- does not guarantee execution,
+- and does not authorize mutation on its own.
+
+Intent Confirmation is agreement to outcome, not agreement to rules.
+
+---
+
+## Intent Preview
+
+**Intent Preview**  
+A server-owned, non-mutating projection of the exact outcome that *would* occur if a player’s expressed intent were confirmed under the current conditions.
+
+An Intent Preview is:
+
+- **Frozen** — bound to a specific moment in time and state
+- **Explicit** — clearly shows what would be accepted, rejected, and credited
+- **Non-mutating** — performs no inventory, balance, or world changes
+- **Honest** — refuses to exist if truth cannot be established
+- **Invalidatable** — becomes unusable if relevant reality changes (inventory, configuration, reload, etc.)
+
+An Intent Preview exists to answer a single question:
+
+> *“If I confirm this intent right now, what exactly will happen?”*
+
+It does **not**:
+- remove items,
+- credit currency,
+- reserve inventory,
+- infer missing information,
+- guarantee future validity,
+- or negotiate outcomes.
+
+An Intent Preview must either reflect the truth completely or refuse to be created.
+
+Intent Preview precedes and enables **Intent Confirmation**, forming a deliberate trust boundary between player intent and system mutation.
+
+---
+
+### Metadata Relevance Policy
+
+**Metadata Relevance Policy** is an adapter-owned, auditable policy that determines
+how item metadata (including NBT) is treated during declaration, valuation, and
+exchange evaluation.
+
+This policy explicitly defines whether metadata is:
+
+- **REQUIRED** — metadata must be declared and evaluated for honesty
+- **IGNORED** — metadata is deliberately excluded from consideration
+- **UNDECLARED** — metadata relevance is unknown and therefore unsafe
+
+Ignoring metadata is **never implicit**.
+
+When metadata is ignored, it is the result of an **explicit administrative choice**,
+not a convenience default or fallback behavior. This choice must be auditable and
+visible in system configuration or documentation.
+
+If metadata relevance cannot be established honestly, the system **refuses**
+the interaction rather than guessing or approximating.
+
+The Metadata Relevance Policy exists to:
+- reduce administrative tedium where metadata is not meaningful,
+- prevent silent loss of truth when metadata *is* meaningful,
+- and preserve honesty as a system responsibility rather than a human burden.
+
+This policy affects declaration and evaluation only.
+It does not grant additional permissiveness beyond declared economic rules,
+and it does not override refusal semantics.
+
+Metadata relevance is resolved **before execution** and is immutable for the
+lifetime of an evaluated exchange.
+
+---
+
 ## Mutation
 
 A real-world change resulting from a permitted exchange.
