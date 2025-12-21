@@ -273,3 +273,6 @@ during implementation.
 ---
 
 End of planning chronicle.
+
+Note: Phase 3 execution was intentionally paused for architectural consolidation.
+See docs/chronicle/architectural_consolidation_phase_3.md for rationale and forward guidance.
