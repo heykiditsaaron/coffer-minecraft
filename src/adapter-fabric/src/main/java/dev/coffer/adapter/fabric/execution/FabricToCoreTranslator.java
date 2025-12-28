@@ -1,6 +1,5 @@
 package dev.coffer.adapter.fabric.execution;
 
-import dev.coffer.adapter.fabric.boundary.DeclaredExchangeRequest;
 import dev.coffer.core.ExchangeRequest;
 
 import java.util.Objects;
@@ -18,15 +17,23 @@ public final class FabricToCoreTranslator {
         // utility
     }
 
-    public static ExchangeRequest translate(DeclaredExchangeRequest declared) {
+    public static ExchangeRequest translate(Object declared) {
         Objects.requireNonNull(declared, "declared");
 
-        // Core treats actor, context, and payload as opaque Objects.
-        // Use record accessors exactly as defined.
-        Object actor = declared.invoker();
-        Object context = declared.intent();
-        Object payload = declared;
+        if (declared instanceof dev.coffer.adapter.fabric.boundary.DeclaredExchangeRequest sell) {
+            Object actor = sell.invoker();
+            Object context = sell.intent();
+            Object payload = sell;
+            return new ExchangeRequest(actor, context, payload);
+        }
 
-        return new ExchangeRequest(actor, context, payload);
+        if (declared instanceof dev.coffer.adapter.fabric.boundary.DeclaredShopPurchase buy) {
+            Object actor = buy.invoker();
+            Object context = dev.coffer.adapter.fabric.boundary.ExchangeIntent.BUY;
+            Object payload = buy;
+            return new ExchangeRequest(actor, context, payload);
+        }
+
+        throw new IllegalArgumentException("Unsupported declared exchange type: " + declared.getClass());
     }
 }

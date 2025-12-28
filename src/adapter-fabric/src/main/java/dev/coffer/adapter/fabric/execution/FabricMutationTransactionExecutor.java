@@ -1,12 +1,14 @@
 package dev.coffer.adapter.fabric.execution;
 
-import dev.coffer.adapter.fabric.execution.step.BalanceCreditStep;
 import dev.coffer.adapter.fabric.execution.step.InventoryRemovalStep;
+import dev.coffer.adapter.fabric.execution.step.BalanceCreditStep;
 import dev.coffer.core.ExchangeEvaluationResult;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.util.Objects;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * FABRIC MUTATION TRANSACTION EXECUTOR
@@ -22,14 +24,12 @@ import java.util.UUID;
  */
 public final class FabricMutationTransactionExecutor {
 
-    private final InMemoryBalanceStore balanceStore;
+    private final BalanceStore balanceStore;
+    private final FabricAuditSink auditSink;
 
-    public FabricMutationTransactionExecutor() {
-        this(new InMemoryBalanceStore());
-    }
-
-    public FabricMutationTransactionExecutor(InMemoryBalanceStore balanceStore) {
+    public FabricMutationTransactionExecutor(BalanceStore balanceStore, FabricAuditSink auditSink) {
         this.balanceStore = Objects.requireNonNull(balanceStore, "balanceStore");
+        this.auditSink = Objects.requireNonNull(auditSink, "auditSink");
     }
 
     public ExecutionResult executeAtomic(
@@ -60,16 +60,31 @@ public final class FabricMutationTransactionExecutor {
         InventoryRemovalStep inventoryStep =
                 new InventoryRemovalStep(targetPlayer, mutationContext);
 
-        BalanceCreditStep balanceStep =
-                new BalanceCreditStep(balanceStore, creditPlan);
+        ExecutionResult inv = inventoryStep.apply();
+        if (!inv.success()) {
+            return ExecutionResult.fail("INVENTORY_REMOVAL_FAILED: " + inv.reason());
+        }
 
-        MutationTransaction tx =
-                new MutationTransaction(playerId, inventoryStep, balanceStep);
-
-        ExecutionResult txResult = tx.execute();
-
-        if (!txResult.success()) {
-            return ExecutionResult.fail(txResult.reason());
+        List<BalanceCreditStep> applied = new ArrayList<>();
+        try {
+            for (var entry : creditPlan.creditsByCurrency().entrySet()) {
+                BalanceCreditStep step = new BalanceCreditStep(balanceStore, entry.getKey(), entry.getValue(), auditSink);
+                ExecutionResult creditRes = step.apply(playerId);
+                if (!creditRes.success()) {
+                    for (int i = applied.size() - 1; i >= 0; i--) {
+                        applied.get(i).rollback(playerId);
+                    }
+                    inventoryStep.rollback();
+                    return ExecutionResult.fail("BALANCE_CREDIT_FAILED: " + creditRes.reason());
+                }
+                applied.add(step);
+            }
+        } catch (Exception e) {
+            for (int i = applied.size() - 1; i >= 0; i--) {
+                applied.get(i).rollback(playerId);
+            }
+            inventoryStep.rollback();
+            return ExecutionResult.fail("BALANCE_CREDIT_FAILED: " + e.getMessage());
         }
 
         return ExecutionResult.ok();

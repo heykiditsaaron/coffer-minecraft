@@ -26,10 +26,12 @@ public final class CofferFabricRuntime {
 
     private final AtomicReference<CofferFabricState> state;
     private final AtomicReference<CofferFabricRefusal> failureRefusal;
+    private final AtomicReference<Boolean> reloading;
 
     private CofferFabricRuntime() {
         this.state = new AtomicReference<>(CofferFabricState.UNINITIALIZED);
         this.failureRefusal = new AtomicReference<>(null);
+        this.reloading = new AtomicReference<>(false);
     }
 
     /**
@@ -92,6 +94,7 @@ public final class CofferFabricRuntime {
      * Phase 3.A does not implement reload, but MUST leave room for it.
      */
     public void beginReload() {
+        reloading.set(true);
         state.set(CofferFabricState.RELOADING);
     }
 
@@ -99,11 +102,14 @@ public final class CofferFabricRuntime {
      * Exit reload boundary. If a failure was recorded, the adapter remains FAILED.
      */
     public void endReload() {
-        if (failureRefusal.get() != null) {
-            state.set(CofferFabricState.FAILED);
-            return;
+        reloading.set(false);
+        if (state.get() == CofferFabricState.RELOADING) {
+            state.set(CofferFabricState.READY);
         }
-        state.set(CofferFabricState.READY);
+    }
+
+    public boolean isReloading() {
+        return Boolean.TRUE.equals(reloading.get());
     }
 
     /**

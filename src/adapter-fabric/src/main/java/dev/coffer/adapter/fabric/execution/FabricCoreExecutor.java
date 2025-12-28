@@ -1,6 +1,5 @@
 package dev.coffer.adapter.fabric.execution;
 
-import dev.coffer.adapter.fabric.boundary.DeclaredExchangeRequest;
 import dev.coffer.core.CoreEngine;
 import dev.coffer.core.ExchangeEvaluationResult;
 import dev.coffer.core.ExchangeRequest;
@@ -23,11 +22,11 @@ public final class FabricCoreExecutor {
         this.coreEngine = Objects.requireNonNull(coreEngine, "coreEngine");
     }
 
-    public ExchangeEvaluationResult execute(DeclaredExchangeRequest declaredRequest) {
-        Objects.requireNonNull(declaredRequest, "declaredRequest");
+    public ExchangeEvaluationResult execute(Object declared) {
+        Objects.requireNonNull(declared, "declared");
 
         ExchangeRequest request =
-                FabricToCoreTranslator.translate(declaredRequest);
+                FabricToCoreTranslator.translate(declared);
 
         return coreEngine.evaluate(request);
     }

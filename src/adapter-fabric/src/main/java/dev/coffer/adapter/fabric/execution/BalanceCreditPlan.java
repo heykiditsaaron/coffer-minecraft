@@ -16,22 +16,29 @@ import java.util.UUID;
 public final class BalanceCreditPlan {
 
     private final UUID targetPlayerId;
-    private final long creditAmount;
+    private final java.util.Map<String, Long> creditsByCurrency;
 
-    public BalanceCreditPlan(UUID targetPlayerId, long creditAmount) {
+    public BalanceCreditPlan(UUID targetPlayerId, java.util.Map<String, Long> creditsByCurrency) {
         this.targetPlayerId = Objects.requireNonNull(targetPlayerId, "targetPlayerId");
-
-        if (creditAmount <= 0L) {
-            throw new IllegalArgumentException("creditAmount must be > 0");
+        if (creditsByCurrency == null || creditsByCurrency.isEmpty()) {
+            throw new IllegalArgumentException("creditsByCurrency must be non-empty");
         }
-        this.creditAmount = creditAmount;
+        for (var e : creditsByCurrency.entrySet()) {
+            if (e.getKey() == null || e.getKey().isBlank()) {
+                throw new IllegalArgumentException("currencyId must be non-empty");
+            }
+            if (e.getValue() == null || e.getValue() <= 0) {
+                throw new IllegalArgumentException("credit amount must be > 0");
+            }
+        }
+        this.creditsByCurrency = java.util.Collections.unmodifiableMap(new java.util.HashMap<>(creditsByCurrency));
     }
 
     public UUID targetPlayerId() {
         return targetPlayerId;
     }
 
-    public long creditAmount() {
-        return creditAmount;
+    public java.util.Map<String, Long> creditsByCurrency() {
+        return creditsByCurrency;
     }
 }

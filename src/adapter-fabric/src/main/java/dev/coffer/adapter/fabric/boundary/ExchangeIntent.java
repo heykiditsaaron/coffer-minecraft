@@ -6,5 +6,6 @@ package dev.coffer.adapter.fabric.boundary;
  * Declaration-only enumeration of adapter intents.
  */
 public enum ExchangeIntent {
-    SELL
+    SELL,
+    BUY
 }

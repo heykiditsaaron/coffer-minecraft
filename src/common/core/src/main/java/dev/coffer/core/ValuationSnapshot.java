@@ -11,20 +11,22 @@ import java.util.Objects;
 public final class ValuationSnapshot {
 
     private final List<ValuationItemResult> itemResults;
-    private final long totalAcceptedValue;
+    private final java.util.Map<String, Long> totalsByCurrency;
 
     public ValuationSnapshot(List<ValuationItemResult> itemResults) {
         this.itemResults = List.copyOf(
                 Objects.requireNonNull(itemResults, "itemResults")
         );
 
-        long sum = 0;
+        java.util.Map<String, Long> totals = new java.util.HashMap<>();
         for (ValuationItemResult result : this.itemResults) {
             if (result.accepted()) {
-                sum += result.totalValue();
+                String currency = result.currencyId();
+                if (currency == null) continue;
+                totals.merge(currency, result.totalValue(), Long::sum);
             }
         }
-        this.totalAcceptedValue = sum;
+        this.totalsByCurrency = java.util.Collections.unmodifiableMap(totals);
     }
 
     public List<ValuationItemResult> itemResults() {
@@ -32,10 +34,14 @@ public final class ValuationSnapshot {
     }
 
     public long totalAcceptedValue() {
-        return totalAcceptedValue;
+        return totalsByCurrency.values().stream().mapToLong(Long::longValue).sum();
+    }
+
+    public java.util.Map<String, Long> totalsByCurrency() {
+        return totalsByCurrency;
     }
 
     public boolean hasAnyAccepted() {
-        return totalAcceptedValue > 0;
+        return totalsByCurrency.values().stream().anyMatch(v -> v > 0);
     }
 }

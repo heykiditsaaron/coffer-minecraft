@@ -11,37 +11,45 @@ public final class ValuationItemResult {
     private final long quantity;
     private final long totalValue;
     private final DenialReason denialReason;
+    private final String currencyId;
 
     private ValuationItemResult(
             Object item,
             long quantity,
             long totalValue,
-            DenialReason denialReason
+            DenialReason denialReason,
+            String currencyId
     ) {
-        this.item = item;
+        this.item = Objects.requireNonNull(item);
         this.quantity = quantity;
         this.totalValue = totalValue;
         this.denialReason = denialReason;
+        this.currencyId = currencyId;
     }
 
-    public static ValuationItemResult accepted(Object item, long quantity, long totalValue) {
+    public static ValuationItemResult accepted(Object item, long quantity, long totalValue, String currencyId) {
         if (totalValue <= 0) {
             throw new IllegalArgumentException("totalValue must be positive");
         }
+        if (currencyId == null || currencyId.isBlank()) {
+            throw new IllegalArgumentException("currencyId must be non-empty");
+        }
         return new ValuationItemResult(
-                Objects.requireNonNull(item),
+                item,
                 quantity,
                 totalValue,
-                null
+                null,
+                currencyId
         );
     }
 
     public static ValuationItemResult rejected(Object item, long quantity, DenialReason reason) {
         return new ValuationItemResult(
-                Objects.requireNonNull(item),
+                item,
                 quantity,
                 0,
-                Objects.requireNonNull(reason)
+                Objects.requireNonNull(reason),
+                null
         );
     }
 
@@ -63,5 +71,9 @@ public final class ValuationItemResult {
 
     public DenialReason denialReason() {
         return denialReason;
+    }
+
+    public String currencyId() {
+        return currencyId;
     }
 }

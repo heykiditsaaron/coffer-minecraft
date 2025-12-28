@@ -24,6 +24,8 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:0.102.0+1.21.1"
 
     implementation project(":src:common:core")
+    implementation 'org.yaml:snakeyaml:2.2'
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
 }
 
 loom {

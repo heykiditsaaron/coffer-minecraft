@@ -67,8 +67,8 @@ public final class BalanceCreditPlanner {
             );
         }
 
-        long creditAmount = snapshot.totalAcceptedValue();
-        if (creditAmount <= 0L) {
+        java.util.Map<String, Long> totals = snapshot.totalsByCurrency();
+        if (totals.isEmpty()) {
             return BalanceCreditPlanningResult.refused(
                     BalanceCreditPlanningRefusal.of(
                             "ZERO_CREDIT_VALUE",
@@ -80,7 +80,7 @@ public final class BalanceCreditPlanner {
         BalanceCreditPlan plan =
                 new BalanceCreditPlan(
                         targetPlayerId,
-                        creditAmount
+                        totals
                 );
 
         return BalanceCreditPlanningResult.planned(plan);
