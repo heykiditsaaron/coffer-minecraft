@@ -13,7 +13,9 @@ import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.StringNbtReader;
+import org.coffer.firstparty.authority.transferablevalue.port.ReceivabilityResult;
 import org.coffer.firstparty.authority.transferablevalue.port.RemovabilityResult;
+import org.coffer.firstparty.authority.transferablevalue.port.TransferableValueDescriptor;
 import org.coffer.firstparty.authority.transferablevalue.port.TransferableValueSet;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -102,6 +104,98 @@ class MinecraftPlayerInventoryContainerTest {
         assertEquals(secondNbtBefore, second.getNbt().toString());
     }
 
+    @Test
+    void emptySlotCanReceiveItem() {
+        MinecraftPlayerInventoryContainer container = container(List.of(ItemStack.EMPTY));
+
+        ReceivabilityResult result = container.canReceive(values(descriptor("minecraft:stone", 64)));
+
+        assertInstanceOf(ReceivabilityResult.Success.class, result);
+    }
+
+    @Test
+    void partialMatchingStackCanReceiveMore() {
+        MinecraftPlayerInventoryContainer container = container(List.of(new ItemStack(Items.STONE, 60)));
+
+        ReceivabilityResult result = container.canReceive(values(descriptor("minecraft:stone", 4)));
+
+        assertInstanceOf(ReceivabilityResult.Success.class, result);
+    }
+
+    @Test
+    void fullMatchingStackPlusEmptySlotCanReceiveRemainder() {
+        MinecraftPlayerInventoryContainer container =
+                container(List.of(new ItemStack(Items.STONE, 64), ItemStack.EMPTY));
+
+        ReceivabilityResult result = container.canReceive(values(descriptor("minecraft:stone", 1)));
+
+        assertInstanceOf(ReceivabilityResult.Success.class, result);
+    }
+
+    @Test
+    void fullInventoryCannotReceive() {
+        MinecraftPlayerInventoryContainer container =
+                container(List.of(new ItemStack(Items.STONE, 64), new ItemStack(Items.DIRT, 64)));
+
+        ReceivabilityResult result = container.canReceive(values(descriptor("minecraft:diamond", 1)));
+
+        ReceivabilityResult.Failed failed = assertInstanceOf(ReceivabilityResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void nbtMismatchDoesNotMergeIntoOccupiedStack() throws CommandSyntaxException {
+        MinecraftPlayerInventoryContainer container =
+                container(List.of(stackWithNbt(Items.STONE, 63, "{custom:1b}")));
+
+        ReceivabilityResult result = container.canReceive(values(
+                new MinecraftItemDescriptor("minecraft:stone", 1, Optional.of("{custom:2b}"))));
+
+        ReceivabilityResult.Failed failed = assertInstanceOf(ReceivabilityResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void multipleIncomingValuesAreEvaluatedTogether() {
+        MinecraftPlayerInventoryContainer container = container(List.of(ItemStack.EMPTY));
+
+        ReceivabilityResult result = container.canReceive(values(
+                descriptor("minecraft:stone", 64),
+                descriptor("minecraft:dirt", 64)));
+
+        ReceivabilityResult.Failed failed = assertInstanceOf(ReceivabilityResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void canReceiveDoesNotMutateInventory() throws CommandSyntaxException {
+        ItemStack first = new ItemStack(Items.STONE, 60);
+        ItemStack second = stackWithNbt(Items.DIRT, 10, "{custom:1b}");
+        String secondNbtBefore = second.getNbt().toString();
+        MinecraftPlayerInventoryContainer container = container(List.of(first, second, ItemStack.EMPTY));
+
+        container.canReceive(values(descriptor("minecraft:stone", 10)));
+
+        assertEquals(60, first.getCount());
+        assertEquals(10, second.getCount());
+        assertEquals(secondNbtBefore, second.getNbt().toString());
+    }
+
+    @Test
+    void nonMinecraftDescriptorFailsSafely() {
+        MinecraftPlayerInventoryContainer container = container(List.of(ItemStack.EMPTY));
+
+        ReceivabilityResult result = container.canReceive(values(new TransferableValueDescriptor() {
+            @Override
+            public long quantity() {
+                return 1;
+            }
+        }));
+
+        ReceivabilityResult.Failed failed = assertInstanceOf(ReceivabilityResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
     private static MinecraftPlayerInventoryContainer container(List<ItemStack> slots) {
         return new MinecraftPlayerInventoryContainer(
                 PLAYER_ID,
@@ -109,8 +203,8 @@ class MinecraftPlayerInventoryContainerTest {
                 slots);
     }
 
-    private static TransferableValueSet values(MinecraftItemDescriptor descriptor) {
-        return new TransferableValueSet(List.of(descriptor));
+    private static TransferableValueSet values(TransferableValueDescriptor... descriptors) {
+        return new TransferableValueSet(List.of(descriptors));
     }
 
     private static MinecraftItemDescriptor descriptor(String itemId, long quantity) {

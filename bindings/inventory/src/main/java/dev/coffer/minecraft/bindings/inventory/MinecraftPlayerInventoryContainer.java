@@ -1,5 +1,6 @@
 package dev.coffer.minecraft.bindings.inventory;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.StringNbtReader;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import org.coffer.firstparty.authority.transferablevalue.port.MutationApplicationResult;
 import org.coffer.firstparty.authority.transferablevalue.port.ReceivabilityResult;
 import org.coffer.firstparty.authority.transferablevalue.port.RemovabilityResult;
@@ -18,6 +22,7 @@ import org.coffer.firstparty.authority.transferablevalue.port.TransferableValueS
 
 public final class MinecraftPlayerInventoryContainer implements TransferableValueContainer {
     public static final String VALUE_NOT_REMOVABLE = "minecraft.value.not_removable";
+    public static final String VALUE_NOT_RECEIVABLE = "minecraft.value.not_receivable";
     public static final String CONTAINER_UNAVAILABLE = "minecraft.container.unavailable";
 
     private final String containerId;
@@ -82,7 +87,47 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
 
     @Override
     public ReceivabilityResult canReceive(TransferableValueSet values) {
-        throw new UnsupportedOperationException("canReceive is not implemented yet");
+        Objects.requireNonNull(values, "values");
+
+        Optional<List<ItemStack>> resolvedSlots = slotsResolver.get();
+        if (resolvedSlots == null || resolvedSlots.isEmpty()) {
+            return new ReceivabilityResult.Unknown(CONTAINER_UNAVAILABLE);
+        }
+
+        Map<DescriptorKey, RequiredValue> incomingValues = new LinkedHashMap<>();
+        for (TransferableValueDescriptor value : values.values()) {
+            if (!(value instanceof MinecraftItemDescriptor descriptor)) {
+                return new ReceivabilityResult.Failed(VALUE_NOT_RECEIVABLE);
+            }
+
+            DescriptorKey key = DescriptorKey.from(descriptor);
+            incomingValues.merge(
+                    key,
+                    new RequiredValue(descriptor, descriptor.quantity()),
+                    (existing, incoming) -> existing.plus(incoming.quantity()));
+        }
+
+        List<ItemStack> slots = resolvedSlots.get();
+        long emptySlots = emptySlotCount(slots);
+        for (RequiredValue incomingValue : incomingValues.values()) {
+            Optional<Integer> maxCount = maxCountForDescriptor(incomingValue.descriptor());
+            if (maxCount.isEmpty()) {
+                return new ReceivabilityResult.Failed(VALUE_NOT_RECEIVABLE);
+            }
+
+            long remaining = incomingValue.quantity() - compatiblePartialCapacity(slots, incomingValue.descriptor());
+            if (remaining <= 0) {
+                continue;
+            }
+
+            long requiredEmptySlots = divideRoundingUp(remaining, maxCount.get());
+            if (requiredEmptySlots > emptySlots) {
+                return new ReceivabilityResult.Failed(VALUE_NOT_RECEIVABLE);
+            }
+            emptySlots -= requiredEmptySlots;
+        }
+
+        return new ReceivabilityResult.Success();
     }
 
     @Override
@@ -109,6 +154,50 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
             }
         }
         return total;
+    }
+
+    private static long compatiblePartialCapacity(List<ItemStack> slots, MinecraftItemDescriptor descriptor) {
+        long capacity = 0;
+        for (ItemStack stack : slots) {
+            if (MinecraftItemMatcher.matches(stack, descriptor)) {
+                capacity += Math.max(0, stack.getMaxCount() - stack.getCount());
+            }
+        }
+        return capacity;
+    }
+
+    private static long emptySlotCount(List<ItemStack> slots) {
+        long emptySlots = 0;
+        for (ItemStack stack : slots) {
+            if (stack.isEmpty()) {
+                emptySlots++;
+            }
+        }
+        return emptySlots;
+    }
+
+    private static Optional<Integer> maxCountForDescriptor(MinecraftItemDescriptor descriptor) {
+        if (descriptor.nbtPayload().isPresent()) {
+            try {
+                StringNbtReader.parse(descriptor.nbtPayload().orElseThrow());
+            } catch (CommandSyntaxException exception) {
+                return Optional.empty();
+            }
+        }
+
+        Identifier id = Identifier.tryParse(descriptor.itemId());
+        if (id == null || !Registries.ITEM.containsId(id)) {
+            return Optional.empty();
+        }
+        ItemStack representative = new ItemStack(Registries.ITEM.get(id));
+        if (representative.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(representative.getMaxCount());
+    }
+
+    private static long divideRoundingUp(long value, int divisor) {
+        return (value + divisor - 1) / divisor;
     }
 
     private static String containerId(UUID playerId, Region region) {
