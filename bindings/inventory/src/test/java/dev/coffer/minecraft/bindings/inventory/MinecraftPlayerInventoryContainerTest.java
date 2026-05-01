@@ -4,15 +4,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.StringNbtReader;
+import org.coffer.firstparty.authority.transferablevalue.port.MutationApplicationResult;
 import org.coffer.firstparty.authority.transferablevalue.port.ReceivabilityResult;
 import org.coffer.firstparty.authority.transferablevalue.port.RemovabilityResult;
 import org.coffer.firstparty.authority.transferablevalue.port.SimulationResult;
@@ -20,7 +23,6 @@ import org.coffer.firstparty.authority.transferablevalue.port.TransferableValueD
 import org.coffer.firstparty.authority.transferablevalue.port.TransferableValueSet;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MinecraftPlayerInventoryContainerTest {
     private static final UUID PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -333,16 +335,177 @@ class MinecraftPlayerInventoryContainerTest {
     }
 
     @Test
-    void applyAtomicSwapRemainsUnsupported() {
-        MinecraftPlayerInventoryContainer first = container(List.of(new ItemStack(Items.STONE, 1)));
-        MinecraftPlayerInventoryContainer second = container(List.of(new ItemStack(Items.DIRT, 1)));
+    void successfulApplicationMutatesBothInventories() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 5), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY);
+        MinecraftPlayerInventoryContainer first = container(firstSlots);
+        MinecraftPlayerInventoryContainer second = container(secondSlots);
 
-        assertThrows(
-                UnsupportedOperationException.class,
-                () -> first.applyAtomicSwap(
-                        second,
-                        values(descriptor("minecraft:stone", 1)),
-                        values(descriptor("minecraft:dirt", 1))));
+        MutationApplicationResult result = first.applyAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 3)),
+                values(descriptor("minecraft:dirt", 2)));
+
+        assertInstanceOf(MutationApplicationResult.Success.class, result);
+        assertEquals(2, firstSlots.get(0).getCount());
+        assertEquals(2, firstSlots.get(1).getCount());
+        assertEquals(3, secondSlots.get(0).getCount());
+        assertEquals(3, secondSlots.get(1).getCount());
+    }
+
+    @Test
+    void applicationFirstGuardsWithSimulation() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.STONE, 5), ItemStack.EMPTY);
+        MinecraftPlayerInventoryContainer first = container(firstSlots);
+        MinecraftPlayerInventoryContainer second = container(secondSlots);
+
+        MutationApplicationResult result = first.applyAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 3)),
+                values(descriptor("minecraft:stone", 3)));
+
+        MutationApplicationResult.Failed failed = assertInstanceOf(MutationApplicationResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE, failed.reasonCode());
+        assertEquals(5, firstSlots.get(0).getCount());
+        assertEquals(5, secondSlots.get(0).getCount());
+    }
+
+    @Test
+    void failedSimulationPreventsMutation() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 64));
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 64), new ItemStack(Items.DIAMOND, 64), ItemStack.EMPTY);
+        MinecraftPlayerInventoryContainer first = container(firstSlots);
+        MinecraftPlayerInventoryContainer second = container(secondSlots);
+
+        MutationApplicationResult result = first.applyAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 1)),
+                values(descriptor("minecraft:dirt", 64), descriptor("minecraft:diamond", 64)));
+
+        MutationApplicationResult.Failed failed = assertInstanceOf(MutationApplicationResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+        assertEquals(64, firstSlots.get(0).getCount());
+        assertEquals(64, secondSlots.get(0).getCount());
+        assertEquals(64, secondSlots.get(1).getCount());
+    }
+
+    @Test
+    void nbtIdentityIsPreservedDuringApplication() throws CommandSyntaxException {
+        String stoneNbt = "{custom:1b}";
+        String dirtNbt = "{custom:2b}";
+        List<ItemStack> firstSlots = mutableSlots(stackWithNbt(Items.STONE, 2, stoneNbt), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(stackWithNbt(Items.DIRT, 2, dirtNbt), ItemStack.EMPTY);
+        MinecraftPlayerInventoryContainer first = container(firstSlots);
+        MinecraftPlayerInventoryContainer second = container(secondSlots);
+
+        MutationApplicationResult result = first.applyAtomicSwap(
+                second,
+                values(new MinecraftItemDescriptor("minecraft:stone", 1, Optional.of(stoneNbt))),
+                values(new MinecraftItemDescriptor("minecraft:dirt", 1, Optional.of(dirtNbt))));
+
+        assertInstanceOf(MutationApplicationResult.Success.class, result);
+        assertEquals(stoneNbt, secondSlots.get(1).getNbt().toString());
+        assertEquals(dirtNbt, firstSlots.get(1).getNbt().toString());
+    }
+
+    @Test
+    void multiValueApplicationSucceedsOnlyWhenFullSwapCompletes() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 64), new ItemStack(Items.DIAMOND, 64), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 64), ItemStack.EMPTY);
+        MinecraftPlayerInventoryContainer first = container(firstSlots);
+        MinecraftPlayerInventoryContainer second = container(secondSlots);
+
+        MutationApplicationResult success = first.applyAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 64), descriptor("minecraft:diamond", 64)),
+                values(descriptor("minecraft:dirt", 64)));
+
+        assertInstanceOf(MutationApplicationResult.Success.class, success);
+        assertEquals(64, firstSlots.get(0).getCount());
+        assertEquals(0, firstSlots.get(1).getCount());
+        assertEquals(0, firstSlots.get(2).getCount());
+        assertEquals(64, secondSlots.get(0).getCount());
+        assertEquals(64, secondSlots.get(1).getCount());
+
+        List<ItemStack> constrainedFirstSlots = mutableSlots(new ItemStack(Items.STONE, 64), new ItemStack(Items.DIAMOND, 64), ItemStack.EMPTY);
+        List<ItemStack> constrainedSecondSlots = mutableSlots(new ItemStack(Items.DIRT, 64));
+        MinecraftPlayerInventoryContainer constrainedFirst = container(constrainedFirstSlots);
+        MinecraftPlayerInventoryContainer constrainedSecond = container(constrainedSecondSlots);
+
+        MutationApplicationResult failedResult = constrainedFirst.applyAtomicSwap(
+                constrainedSecond,
+                values(descriptor("minecraft:stone", 64), descriptor("minecraft:diamond", 64)),
+                values(descriptor("minecraft:dirt", 64)));
+
+        MutationApplicationResult.Failed failed = assertInstanceOf(MutationApplicationResult.Failed.class, failedResult);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+        assertEquals(64, constrainedFirstSlots.get(0).getCount());
+        assertEquals(64, constrainedFirstSlots.get(1).getCount());
+        assertEquals(64, constrainedSecondSlots.get(0).getCount());
+    }
+
+    @Test
+    void stateDriftAfterSimulationBeforeMutationReturnsUnknown() {
+        AtomicInteger firstResolutions = new AtomicInteger();
+        List<ItemStack> simulationSlots = mutableSlots(new ItemStack(Items.STONE, 5), ItemStack.EMPTY);
+        List<ItemStack> driftedSlots = mutableSlots(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY);
+        MinecraftPlayerInventoryContainer first = new MinecraftPlayerInventoryContainer(
+                "player:" + PLAYER_ID + ":inventory:main",
+                MinecraftPlayerInventoryContainer.Region.MAIN,
+                () -> Optional.of(firstResolutions.getAndIncrement() == 0 ? simulationSlots : driftedSlots));
+        MinecraftPlayerInventoryContainer second = container(mutableSlots(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY));
+
+        MutationApplicationResult result = first.applyAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 3)),
+                values(descriptor("minecraft:dirt", 3)));
+
+        MutationApplicationResult.Unknown unknown = assertInstanceOf(MutationApplicationResult.Unknown.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE, unknown.reasonCode());
+        assertEquals(5, driftedSlots.get(0).getCount());
+    }
+
+    @Test
+    void noSuccessIsReportedForPartialUncertainApplication() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 64), new ItemStack(Items.DIAMOND, 64), ItemStack.EMPTY);
+        List<ItemStack> secondSimulationSlots = mutableSlots(new ItemStack(Items.DIRT, 64), ItemStack.EMPTY, ItemStack.EMPTY);
+        List<ItemStack> secondMutationSlots = mutableSlots(new ItemStack(Items.DIRT, 64));
+        AtomicInteger secondResolutions = new AtomicInteger();
+        MinecraftPlayerInventoryContainer first = container(firstSlots);
+        MinecraftPlayerInventoryContainer second = new MinecraftPlayerInventoryContainer(
+                "player:" + PLAYER_ID + ":inventory:main",
+                MinecraftPlayerInventoryContainer.Region.MAIN,
+                () -> Optional.of(secondResolutions.getAndIncrement() == 0 ? secondSimulationSlots : secondMutationSlots));
+
+        MutationApplicationResult result = first.applyAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 64), descriptor("minecraft:diamond", 64)),
+                values(descriptor("minecraft:dirt", 64)));
+
+        MutationApplicationResult.Unknown unknown = assertInstanceOf(MutationApplicationResult.Unknown.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, unknown.reasonCode());
+        assertEquals(0, firstSlots.get(0).getCount());
+        assertEquals(0, firstSlots.get(1).getCount());
+        assertEquals(Items.STONE, secondMutationSlots.get(0).getItem());
+        assertEquals(64, secondMutationSlots.get(0).getCount());
+    }
+
+    @Test
+    void mutationRemainsInsideConfiguredSlotBoundaries() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 2), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 2), ItemStack.EMPTY);
+        ItemStack outsideBoundary = new ItemStack(Items.STONE, 7);
+        MinecraftPlayerInventoryContainer first = container(firstSlots);
+        MinecraftPlayerInventoryContainer second = container(secondSlots);
+
+        MutationApplicationResult result = first.applyAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 1)),
+                values(descriptor("minecraft:dirt", 1)));
+
+        assertInstanceOf(MutationApplicationResult.Success.class, result);
+        assertEquals(7, outsideBoundary.getCount());
     }
 
     private static MinecraftPlayerInventoryContainer container(List<ItemStack> slots) {
@@ -350,6 +513,10 @@ class MinecraftPlayerInventoryContainerTest {
                 PLAYER_ID,
                 MinecraftPlayerInventoryContainer.Region.MAIN,
                 slots);
+    }
+
+    private static List<ItemStack> mutableSlots(ItemStack... slots) {
+        return new ArrayList<>(List.of(slots));
     }
 
     private static TransferableValueSet values(TransferableValueDescriptor... descriptors) {

@@ -32,7 +32,7 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
     private final Supplier<Optional<List<ItemStack>>> slotsResolver;
 
     public MinecraftPlayerInventoryContainer(UUID playerId, Region region, List<ItemStack> slots) {
-        this(containerId(playerId, region), region, () -> Optional.of(List.copyOf(slots)));
+        this(containerId(playerId, region), region, () -> Optional.of(Objects.requireNonNull(slots, "slots")));
     }
 
     public MinecraftPlayerInventoryContainer(
@@ -158,7 +158,50 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
             TransferableValueContainer other,
             TransferableValueSet fromThis,
             TransferableValueSet fromOther) {
-        throw new UnsupportedOperationException("applyAtomicSwap is not implemented yet");
+        SimulationResult simulation = simulateAtomicSwap(other, fromThis, fromOther);
+        if (simulation instanceof SimulationResult.Failed failed) {
+            return new MutationApplicationResult.Failed(failed.reasonCode());
+        }
+        if (simulation instanceof SimulationResult.Unknown unknown) {
+            return new MutationApplicationResult.Unknown(unknown.reasonCode());
+        }
+
+        if (!(other instanceof MinecraftPlayerInventoryContainer otherContainer)) {
+            return new MutationApplicationResult.Unknown(CONTAINER_UNAVAILABLE);
+        }
+
+        Optional<List<ItemStack>> thisResolvedSlots = slotsResolver.get();
+        Optional<List<ItemStack>> otherResolvedSlots = otherContainer.slotsResolver.get();
+        if (thisResolvedSlots == null || thisResolvedSlots.isEmpty()
+                || otherResolvedSlots == null || otherResolvedSlots.isEmpty()) {
+            return new MutationApplicationResult.Unknown(CONTAINER_UNAVAILABLE);
+        }
+
+        Optional<Map<DescriptorKey, RequiredValue>> thisOutgoing = aggregate(fromThis);
+        Optional<Map<DescriptorKey, RequiredValue>> otherOutgoing = aggregate(fromOther);
+        if (thisOutgoing.isEmpty() || otherOutgoing.isEmpty()) {
+            return new MutationApplicationResult.Unknown(VALUE_NOT_REMOVABLE);
+        }
+
+        Optional<List<ItemStack>> removedFromThis = removeStacksFrom(thisResolvedSlots.get(), thisOutgoing.get());
+        if (removedFromThis.isEmpty()) {
+            return new MutationApplicationResult.Unknown(VALUE_NOT_REMOVABLE);
+        }
+
+        Optional<List<ItemStack>> removedFromOther = removeStacksFrom(otherResolvedSlots.get(), otherOutgoing.get());
+        if (removedFromOther.isEmpty()) {
+            return new MutationApplicationResult.Unknown(VALUE_NOT_REMOVABLE);
+        }
+
+        if (!insertStacksInto(otherResolvedSlots.get(), removedFromThis.get())) {
+            return new MutationApplicationResult.Unknown(VALUE_NOT_RECEIVABLE);
+        }
+
+        if (!insertStacksInto(thisResolvedSlots.get(), removedFromOther.get())) {
+            return new MutationApplicationResult.Unknown(VALUE_NOT_RECEIVABLE);
+        }
+
+        return new MutationApplicationResult.Success();
     }
 
     private static long matchingQuantity(List<ItemStack> slots, MinecraftItemDescriptor descriptor) {
@@ -274,6 +317,89 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
         }
 
         return new ReceivabilityResult.Success();
+    }
+
+    private static Optional<List<ItemStack>> removeStacksFrom(
+            List<ItemStack> slots,
+            Map<DescriptorKey, RequiredValue> outgoingValues) {
+        if (!(canRemoveFrom(slots, outgoingValues) instanceof RemovabilityResult.Success)) {
+            return Optional.empty();
+        }
+
+        List<ItemStack> removedStacks = new ArrayList<>();
+        try {
+            for (RequiredValue outgoingValue : outgoingValues.values()) {
+                long remaining = outgoingValue.quantity();
+                for (int index = 0; index < slots.size() && remaining > 0; index++) {
+                    ItemStack stack = slots.get(index);
+                    if (!MinecraftItemMatcher.matches(stack, outgoingValue.descriptor())) {
+                        continue;
+                    }
+                    int removed = (int) Math.min(remaining, stack.getCount());
+                    ItemStack removedStack = stack.split(removed);
+                    if (stack.isEmpty()) {
+                        slots.set(index, ItemStack.EMPTY);
+                    }
+                    removedStacks.add(removedStack);
+                    remaining -= removed;
+                }
+                if (remaining > 0) {
+                    return Optional.empty();
+                }
+            }
+        } catch (RuntimeException exception) {
+            return Optional.empty();
+        }
+
+        return Optional.of(removedStacks);
+    }
+
+    private static boolean insertStacksInto(List<ItemStack> slots, List<ItemStack> incomingStacks) {
+        try {
+            for (ItemStack incomingStack : incomingStacks) {
+                ItemStack remainingStack = incomingStack.copy();
+
+                for (ItemStack stack : slots) {
+                    if (remainingStack.isEmpty()) {
+                        break;
+                    }
+                    if (!canMerge(stack, remainingStack)) {
+                        continue;
+                    }
+                    int accepted = Math.min(remainingStack.getCount(), stack.getMaxCount() - stack.getCount());
+                    stack.increment(accepted);
+                    remainingStack.decrement(accepted);
+                }
+
+                for (int index = 0; index < slots.size() && !remainingStack.isEmpty(); index++) {
+                    if (!slots.get(index).isEmpty()) {
+                        continue;
+                    }
+                    int accepted = Math.min(remainingStack.getCount(), remainingStack.getMaxCount());
+                    ItemStack inserted = remainingStack.copyWithCount(accepted);
+                    slots.set(index, inserted);
+                    remainingStack.decrement(accepted);
+                }
+
+                if (!remainingStack.isEmpty()) {
+                    return false;
+                }
+            }
+        } catch (RuntimeException exception) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static boolean canMerge(ItemStack existing, ItemStack incoming) {
+        if (existing.isEmpty() || incoming.isEmpty()) {
+            return false;
+        }
+        if (existing.getCount() >= existing.getMaxCount()) {
+            return false;
+        }
+        return ItemStack.canCombine(existing, incoming);
     }
 
     private static Optional<Map<DescriptorKey, RequiredValue>> aggregate(TransferableValueSet values) {
