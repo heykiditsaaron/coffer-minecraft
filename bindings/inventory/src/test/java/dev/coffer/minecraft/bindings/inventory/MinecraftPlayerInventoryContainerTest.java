@@ -15,10 +15,12 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.StringNbtReader;
 import org.coffer.firstparty.authority.transferablevalue.port.ReceivabilityResult;
 import org.coffer.firstparty.authority.transferablevalue.port.RemovabilityResult;
+import org.coffer.firstparty.authority.transferablevalue.port.SimulationResult;
 import org.coffer.firstparty.authority.transferablevalue.port.TransferableValueDescriptor;
 import org.coffer.firstparty.authority.transferablevalue.port.TransferableValueSet;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MinecraftPlayerInventoryContainerTest {
     private static final UUID PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -194,6 +196,153 @@ class MinecraftPlayerInventoryContainerTest {
 
         ReceivabilityResult.Failed failed = assertInstanceOf(ReceivabilityResult.Failed.class, result);
         assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void successfulSimulationReturnsSuccess() {
+        MinecraftPlayerInventoryContainer first =
+                container(List.of(new ItemStack(Items.STONE, 5), ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer second =
+                container(List.of(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY));
+
+        SimulationResult result = first.simulateAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 3)),
+                values(descriptor("minecraft:dirt", 3)));
+
+        assertInstanceOf(SimulationResult.Success.class, result);
+    }
+
+    @Test
+    void simulationDoesNotMutateEitherInventory() throws CommandSyntaxException {
+        ItemStack firstStone = new ItemStack(Items.STONE, 5);
+        ItemStack firstTagged = stackWithNbt(Items.DIRT, 2, "{custom:1b}");
+        ItemStack secondDirt = new ItemStack(Items.DIRT, 5);
+        MinecraftPlayerInventoryContainer first = container(List.of(firstStone, firstTagged, ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer second = container(List.of(secondDirt, ItemStack.EMPTY));
+        String firstTaggedNbtBefore = firstTagged.getNbt().toString();
+
+        first.simulateAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 3)),
+                values(descriptor("minecraft:dirt", 3)));
+
+        assertEquals(5, firstStone.getCount());
+        assertEquals(2, firstTagged.getCount());
+        assertEquals(firstTaggedNbtBefore, firstTagged.getNbt().toString());
+        assertEquals(5, secondDirt.getCount());
+    }
+
+    @Test
+    void simulationFailsWhenThisContainerLacksOutgoingValues() {
+        MinecraftPlayerInventoryContainer first = container(List.of(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer second = container(List.of(new ItemStack(Items.STONE, 5), ItemStack.EMPTY));
+
+        SimulationResult result = first.simulateAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 3)),
+                values(descriptor("minecraft:stone", 3)));
+
+        SimulationResult.Failed failed = assertInstanceOf(SimulationResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void simulationFailsWhenOtherContainerLacksOutgoingValues() {
+        MinecraftPlayerInventoryContainer first = container(List.of(new ItemStack(Items.STONE, 5), ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer second = container(List.of(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY));
+
+        SimulationResult result = first.simulateAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 3)),
+                values(descriptor("minecraft:stone", 3)));
+
+        SimulationResult.Failed failed = assertInstanceOf(SimulationResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void simulationFailsWhenThisContainerCannotReceiveIncomingValues() {
+        MinecraftPlayerInventoryContainer first = container(List.of(new ItemStack(Items.STONE, 64)));
+        MinecraftPlayerInventoryContainer second =
+                container(List.of(new ItemStack(Items.DIRT, 64), new ItemStack(Items.DIAMOND, 64), ItemStack.EMPTY));
+
+        SimulationResult result = first.simulateAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 1)),
+                values(descriptor("minecraft:dirt", 64), descriptor("minecraft:diamond", 64)));
+
+        SimulationResult.Failed failed = assertInstanceOf(SimulationResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void simulationFailsWhenOtherContainerCannotReceiveIncomingValues() {
+        MinecraftPlayerInventoryContainer first =
+                container(List.of(new ItemStack(Items.DIRT, 64), new ItemStack(Items.DIAMOND, 64), ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer second = container(List.of(new ItemStack(Items.STONE, 64)));
+
+        SimulationResult result = first.simulateAtomicSwap(
+                second,
+                values(descriptor("minecraft:dirt", 64), descriptor("minecraft:diamond", 64)),
+                values(descriptor("minecraft:stone", 1)));
+
+        SimulationResult.Failed failed = assertInstanceOf(SimulationResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void nbtMismatchPreventsSimulatedRemoval() throws CommandSyntaxException {
+        MinecraftPlayerInventoryContainer first =
+                container(List.of(stackWithNbt(Items.STONE, 5, "{custom:1b}"), ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer second =
+                container(List.of(new ItemStack(Items.DIRT, 5), ItemStack.EMPTY));
+
+        SimulationResult result = first.simulateAtomicSwap(
+                second,
+                values(new MinecraftItemDescriptor("minecraft:stone", 1, Optional.of("{custom:2b}"))),
+                values(descriptor("minecraft:dirt", 1)));
+
+        SimulationResult.Failed failed = assertInstanceOf(SimulationResult.Failed.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void multiValueSwapSucceedsOnlyWhenAllValuesFit() {
+        MinecraftPlayerInventoryContainer first =
+                container(List.of(new ItemStack(Items.STONE, 64), new ItemStack(Items.DIAMOND, 64), ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer second =
+                container(List.of(new ItemStack(Items.DIRT, 64), ItemStack.EMPTY));
+
+        SimulationResult success = first.simulateAtomicSwap(
+                second,
+                values(descriptor("minecraft:stone", 64), descriptor("minecraft:diamond", 64)),
+                values(descriptor("minecraft:dirt", 64)));
+
+        assertInstanceOf(SimulationResult.Success.class, success);
+
+        MinecraftPlayerInventoryContainer constrainedSecond =
+                container(List.of(new ItemStack(Items.DIRT, 64)));
+        SimulationResult failedResult = first.simulateAtomicSwap(
+                constrainedSecond,
+                values(descriptor("minecraft:stone", 64), descriptor("minecraft:diamond", 64)),
+                values(descriptor("minecraft:dirt", 64)));
+
+        SimulationResult.Failed failed = assertInstanceOf(SimulationResult.Failed.class, failedResult);
+        assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void applyAtomicSwapRemainsUnsupported() {
+        MinecraftPlayerInventoryContainer first = container(List.of(new ItemStack(Items.STONE, 1)));
+        MinecraftPlayerInventoryContainer second = container(List.of(new ItemStack(Items.DIRT, 1)));
+
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> first.applyAtomicSwap(
+                        second,
+                        values(descriptor("minecraft:stone", 1)),
+                        values(descriptor("minecraft:dirt", 1))));
     }
 
     private static MinecraftPlayerInventoryContainer container(List<ItemStack> slots) {

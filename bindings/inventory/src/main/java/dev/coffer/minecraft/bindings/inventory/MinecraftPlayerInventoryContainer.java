@@ -1,6 +1,7 @@
 package dev.coffer.minecraft.bindings.inventory;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.registry.Registries;
@@ -62,27 +64,12 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
             return new RemovabilityResult.Unknown(CONTAINER_UNAVAILABLE);
         }
 
-        Map<DescriptorKey, RequiredValue> requiredValues = new LinkedHashMap<>();
-        for (TransferableValueDescriptor value : values.values()) {
-            if (!(value instanceof MinecraftItemDescriptor descriptor)) {
-                return new RemovabilityResult.Failed(VALUE_NOT_REMOVABLE);
-            }
-
-            DescriptorKey key = DescriptorKey.from(descriptor);
-            requiredValues.merge(
-                    key,
-                    new RequiredValue(descriptor, descriptor.quantity()),
-                    (existing, incoming) -> existing.plus(incoming.quantity()));
+        Optional<Map<DescriptorKey, RequiredValue>> requiredValues = aggregate(values);
+        if (requiredValues.isEmpty()) {
+            return new RemovabilityResult.Failed(VALUE_NOT_REMOVABLE);
         }
 
-        for (RequiredValue requiredValue : requiredValues.values()) {
-            long available = matchingQuantity(resolvedSlots.get(), requiredValue.descriptor());
-            if (available < requiredValue.quantity()) {
-                return new RemovabilityResult.Failed(VALUE_NOT_REMOVABLE);
-            }
-        }
-
-        return new RemovabilityResult.Success();
+        return canRemoveFrom(resolvedSlots.get(), requiredValues.get());
     }
 
     @Override
@@ -94,20 +81,112 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
             return new ReceivabilityResult.Unknown(CONTAINER_UNAVAILABLE);
         }
 
-        Map<DescriptorKey, RequiredValue> incomingValues = new LinkedHashMap<>();
-        for (TransferableValueDescriptor value : values.values()) {
-            if (!(value instanceof MinecraftItemDescriptor descriptor)) {
-                return new ReceivabilityResult.Failed(VALUE_NOT_RECEIVABLE);
-            }
-
-            DescriptorKey key = DescriptorKey.from(descriptor);
-            incomingValues.merge(
-                    key,
-                    new RequiredValue(descriptor, descriptor.quantity()),
-                    (existing, incoming) -> existing.plus(incoming.quantity()));
+        Optional<Map<DescriptorKey, RequiredValue>> incomingValues = aggregate(values);
+        if (incomingValues.isEmpty()) {
+            return new ReceivabilityResult.Failed(VALUE_NOT_RECEIVABLE);
         }
 
-        List<ItemStack> slots = resolvedSlots.get();
+        return canReceiveInto(resolvedSlots.get(), incomingValues.get());
+    }
+
+    @Override
+    public SimulationResult simulateAtomicSwap(
+            TransferableValueContainer other,
+            TransferableValueSet fromThis,
+            TransferableValueSet fromOther) {
+        Objects.requireNonNull(other, "other");
+        Objects.requireNonNull(fromThis, "fromThis");
+        Objects.requireNonNull(fromOther, "fromOther");
+
+        if (!(other instanceof MinecraftPlayerInventoryContainer otherContainer)) {
+            return new SimulationResult.Unknown(CONTAINER_UNAVAILABLE);
+        }
+
+        Optional<List<ItemStack>> thisResolvedSlots = slotsResolver.get();
+        Optional<List<ItemStack>> otherResolvedSlots = otherContainer.slotsResolver.get();
+        if (thisResolvedSlots == null || thisResolvedSlots.isEmpty()
+                || otherResolvedSlots == null || otherResolvedSlots.isEmpty()) {
+            return new SimulationResult.Unknown(CONTAINER_UNAVAILABLE);
+        }
+
+        Optional<Map<DescriptorKey, RequiredValue>> thisOutgoing = aggregate(fromThis);
+        Optional<Map<DescriptorKey, RequiredValue>> otherOutgoing = aggregate(fromOther);
+        if (thisOutgoing.isEmpty() || otherOutgoing.isEmpty()) {
+            return new SimulationResult.Failed(VALUE_NOT_REMOVABLE);
+        }
+
+        List<ItemStack> thisWorkingSlots = copySlots(thisResolvedSlots.get());
+        List<ItemStack> otherWorkingSlots = copySlots(otherResolvedSlots.get());
+
+        RemovabilityResult thisRemoval = removeFrom(thisWorkingSlots, thisOutgoing.get());
+        if (thisRemoval instanceof RemovabilityResult.Failed failed) {
+            return new SimulationResult.Failed(failed.reasonCode());
+        }
+        if (thisRemoval instanceof RemovabilityResult.Unknown unknown) {
+            return new SimulationResult.Unknown(unknown.reasonCode());
+        }
+
+        RemovabilityResult otherRemoval = removeFrom(otherWorkingSlots, otherOutgoing.get());
+        if (otherRemoval instanceof RemovabilityResult.Failed failed) {
+            return new SimulationResult.Failed(failed.reasonCode());
+        }
+        if (otherRemoval instanceof RemovabilityResult.Unknown unknown) {
+            return new SimulationResult.Unknown(unknown.reasonCode());
+        }
+
+        ReceivabilityResult otherReceive = insertInto(otherWorkingSlots, thisOutgoing.get());
+        if (otherReceive instanceof ReceivabilityResult.Failed failed) {
+            return new SimulationResult.Failed(failed.reasonCode());
+        }
+        if (otherReceive instanceof ReceivabilityResult.Unknown unknown) {
+            return new SimulationResult.Unknown(unknown.reasonCode());
+        }
+
+        ReceivabilityResult thisReceive = insertInto(thisWorkingSlots, otherOutgoing.get());
+        if (thisReceive instanceof ReceivabilityResult.Failed failed) {
+            return new SimulationResult.Failed(failed.reasonCode());
+        }
+        if (thisReceive instanceof ReceivabilityResult.Unknown unknown) {
+            return new SimulationResult.Unknown(unknown.reasonCode());
+        }
+
+        return new SimulationResult.Success();
+    }
+
+    @Override
+    public MutationApplicationResult applyAtomicSwap(
+            TransferableValueContainer other,
+            TransferableValueSet fromThis,
+            TransferableValueSet fromOther) {
+        throw new UnsupportedOperationException("applyAtomicSwap is not implemented yet");
+    }
+
+    private static long matchingQuantity(List<ItemStack> slots, MinecraftItemDescriptor descriptor) {
+        long total = 0;
+        for (ItemStack stack : slots) {
+            if (MinecraftItemMatcher.matches(stack, descriptor)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static RemovabilityResult canRemoveFrom(
+            List<ItemStack> slots,
+            Map<DescriptorKey, RequiredValue> requiredValues) {
+        for (RequiredValue requiredValue : requiredValues.values()) {
+            long available = matchingQuantity(slots, requiredValue.descriptor());
+            if (available < requiredValue.quantity()) {
+                return new RemovabilityResult.Failed(VALUE_NOT_REMOVABLE);
+            }
+        }
+
+        return new RemovabilityResult.Success();
+    }
+
+    private static ReceivabilityResult canReceiveInto(
+            List<ItemStack> slots,
+            Map<DescriptorKey, RequiredValue> incomingValues) {
         long emptySlots = emptySlotCount(slots);
         for (RequiredValue incomingValue : incomingValues.values()) {
             Optional<Integer> maxCount = maxCountForDescriptor(incomingValue.descriptor());
@@ -130,30 +209,87 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
         return new ReceivabilityResult.Success();
     }
 
-    @Override
-    public SimulationResult simulateAtomicSwap(
-            TransferableValueContainer other,
-            TransferableValueSet fromThis,
-            TransferableValueSet fromOther) {
-        throw new UnsupportedOperationException("simulateAtomicSwap is not implemented yet");
-    }
+    private static RemovabilityResult removeFrom(
+            List<ItemStack> slots,
+            Map<DescriptorKey, RequiredValue> outgoingValues) {
+        RemovabilityResult canRemove = canRemoveFrom(slots, outgoingValues);
+        if (!(canRemove instanceof RemovabilityResult.Success)) {
+            return canRemove;
+        }
 
-    @Override
-    public MutationApplicationResult applyAtomicSwap(
-            TransferableValueContainer other,
-            TransferableValueSet fromThis,
-            TransferableValueSet fromOther) {
-        throw new UnsupportedOperationException("applyAtomicSwap is not implemented yet");
-    }
-
-    private static long matchingQuantity(List<ItemStack> slots, MinecraftItemDescriptor descriptor) {
-        long total = 0;
-        for (ItemStack stack : slots) {
-            if (MinecraftItemMatcher.matches(stack, descriptor)) {
-                total += stack.getCount();
+        for (RequiredValue outgoingValue : outgoingValues.values()) {
+            long remaining = outgoingValue.quantity();
+            for (ItemStack stack : slots) {
+                if (remaining <= 0) {
+                    break;
+                }
+                if (!MinecraftItemMatcher.matches(stack, outgoingValue.descriptor())) {
+                    continue;
+                }
+                int removed = (int) Math.min(remaining, stack.getCount());
+                stack.decrement(removed);
+                remaining -= removed;
             }
         }
-        return total;
+
+        return new RemovabilityResult.Success();
+    }
+
+    private static ReceivabilityResult insertInto(
+            List<ItemStack> slots,
+            Map<DescriptorKey, RequiredValue> incomingValues) {
+        ReceivabilityResult canReceive = canReceiveInto(slots, incomingValues);
+        if (!(canReceive instanceof ReceivabilityResult.Success)) {
+            return canReceive;
+        }
+
+        for (RequiredValue incomingValue : incomingValues.values()) {
+            long remaining = incomingValue.quantity();
+
+            for (ItemStack stack : slots) {
+                if (remaining <= 0) {
+                    break;
+                }
+                if (!MinecraftItemMatcher.matches(stack, incomingValue.descriptor())) {
+                    continue;
+                }
+                int accepted = (int) Math.min(remaining, stack.getMaxCount() - stack.getCount());
+                stack.increment(accepted);
+                remaining -= accepted;
+            }
+
+            for (int index = 0; index < slots.size() && remaining > 0; index++) {
+                if (!slots.get(index).isEmpty()) {
+                    continue;
+                }
+                Optional<ItemStack> stack = stackFrom(incomingValue.descriptor());
+                if (stack.isEmpty()) {
+                    return new ReceivabilityResult.Failed(VALUE_NOT_RECEIVABLE);
+                }
+                int accepted = (int) Math.min(remaining, stack.get().getMaxCount());
+                stack.get().setCount(accepted);
+                slots.set(index, stack.get());
+                remaining -= accepted;
+            }
+        }
+
+        return new ReceivabilityResult.Success();
+    }
+
+    private static Optional<Map<DescriptorKey, RequiredValue>> aggregate(TransferableValueSet values) {
+        Map<DescriptorKey, RequiredValue> aggregatedValues = new LinkedHashMap<>();
+        for (TransferableValueDescriptor value : values.values()) {
+            if (!(value instanceof MinecraftItemDescriptor descriptor)) {
+                return Optional.empty();
+            }
+
+            DescriptorKey key = DescriptorKey.from(descriptor);
+            aggregatedValues.merge(
+                    key,
+                    new RequiredValue(descriptor, descriptor.quantity()),
+                    (existing, incoming) -> existing.plus(incoming.quantity()));
+        }
+        return Optional.of(aggregatedValues);
     }
 
     private static long compatiblePartialCapacity(List<ItemStack> slots, MinecraftItemDescriptor descriptor) {
@@ -177,6 +313,11 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
     }
 
     private static Optional<Integer> maxCountForDescriptor(MinecraftItemDescriptor descriptor) {
+        Optional<ItemStack> stack = stackFrom(descriptor);
+        return stack.map(ItemStack::getMaxCount);
+    }
+
+    private static Optional<ItemStack> stackFrom(MinecraftItemDescriptor descriptor) {
         if (descriptor.nbtPayload().isPresent()) {
             try {
                 StringNbtReader.parse(descriptor.nbtPayload().orElseThrow());
@@ -193,11 +334,24 @@ public final class MinecraftPlayerInventoryContainer implements TransferableValu
         if (representative.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(representative.getMaxCount());
+        if (descriptor.nbtPayload().isPresent()) {
+            try {
+                representative.setNbt(StringNbtReader.parse(descriptor.nbtPayload().orElseThrow()));
+            } catch (CommandSyntaxException exception) {
+                return Optional.empty();
+            }
+        }
+        return Optional.of(representative);
     }
 
     private static long divideRoundingUp(long value, int divisor) {
         return (value + divisor - 1) / divisor;
+    }
+
+    private static List<ItemStack> copySlots(List<ItemStack> slots) {
+        return slots.stream()
+                .map(ItemStack::copy)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private static String containerId(UUID playerId, Region region) {
