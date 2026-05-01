@@ -1,0 +1,17 @@
+# Gradle
+.gradle/
+.gradle-*/
+build/
+
+# Runtime / Fabric
+run/
+logs/
+world/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Artifacts
+*.jar
+*.log
