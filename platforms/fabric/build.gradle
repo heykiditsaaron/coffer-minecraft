@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     implementation project(':bindings:inventory')
+    compileOnly "net.fabricmc:fabric-loader:${fabric_loader_version}"
 }

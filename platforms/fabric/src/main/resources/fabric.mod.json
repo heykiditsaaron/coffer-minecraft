@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "coffer-minecraft",
+  "version": "0.1.0",
+  "name": "Coffer Minecraft",
+  "description": "Minecraft platform integration for Coffer.",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.coffer.minecraft.platform.fabric.CofferMinecraftFabricEntrypoint"
+    ]
+  }
+}
