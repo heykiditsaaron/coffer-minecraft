@@ -1,1 +1,9 @@
 include 'bindings:inventory'
+
+includeBuild('../coffer') {
+    dependencySubstitution {
+        substitute module('dev.coffer:coffer-core') using project(':coffer-core')
+        substitute module('dev.coffer:coffer-runtime') using project(':coffer-runtime')
+        substitute module('dev.coffer:coffer-transferable-value-authority') using project(':first-party:authorities:transferable-value')
+    }
+}

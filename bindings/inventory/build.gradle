@@ -1,1 +1,9 @@
-// Intentionally minimal until Coffer artifact coordinates and Minecraft binding needs are confirmed.
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation 'dev.coffer:coffer-core:1.0.0'
+    implementation 'dev.coffer:coffer-runtime:1.0.0'
+    implementation 'dev.coffer:coffer-transferable-value-authority:1.0.0'
+}
