@@ -18,4 +18,9 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    jvmArgs '-Xverify:none'
+}
+
+loom {
+    accessWidenerPath = file('src/main/resources/coffer-minecraft.accesswidener')
 }
