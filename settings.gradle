@@ -20,6 +20,7 @@ dependencyResolutionManagement {
 }
 
 include 'bindings:inventory'
+include 'platforms:fabric'
 
 includeBuild('../coffer') {
     dependencySubstitution {
