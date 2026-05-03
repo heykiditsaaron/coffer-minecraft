@@ -6,8 +6,10 @@ import dev.coffer.minecraft.bindings.inventory.MinecraftPlayerInventoryContainer
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadFactory;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadInterpreter;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimeValueSetResolver;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.entity.player.PlayerInventory;
@@ -15,13 +17,23 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
+import org.coffer.core.arbitration.ArbitrationResult;
+import org.coffer.core.arbitration.CofferCore;
 import org.coffer.core.authority.AuthorityResolver;
 import org.coffer.core.authority.ResolutionResult;
+import org.coffer.core.model.id.MutationPlanId;
+import org.coffer.core.model.id.OutcomeId;
+import org.coffer.core.model.id.ReasonId;
+import org.coffer.core.model.outcome.Decision;
+import org.coffer.core.model.request.ExchangeRequest;
 import org.coffer.core.model.support.OpaqueObject;
 import org.coffer.firstparty.authority.transferablevalue.core.TransferableValueCoreAuthority;
 import org.coffer.firstparty.authority.transferablevalue.runtime.TransferableValueRuntimeAuthority;
 import org.coffer.runtime.CofferRuntime;
 import org.coffer.runtime.authority.RuntimeAuthority;
+import org.coffer.runtime.model.id.ExecutionPlanId;
+import org.coffer.runtime.model.id.ExecutionResultId;
+import org.coffer.runtime.model.id.ExecutionStepId;
 
 final class CofferMinecraftFabricService {
     private static final System.Logger LOGGER =
@@ -85,6 +97,40 @@ final class CofferMinecraftFabricService {
         return initialized;
     }
 
+    Object executeExchange(ExchangeRequest exchangeRequest) {
+        Objects.requireNonNull(exchangeRequest, "exchangeRequest");
+        requireServerThread();
+
+        String requestId = exchangeRequest.requestId().value();
+        MutationPlanId mutationPlanId = new MutationPlanId(requestId + ":fabric-mutation-plan");
+        ArbitrationResult arbitration = CofferCore.arbitrate(
+                exchangeRequest,
+                coreAuthorityResolver,
+                new OutcomeId(requestId + ":fabric-outcome"),
+                mutationPlanId,
+                denialReasonIds(requestId),
+                exchangeRequest.metadata());
+
+        if (arbitration.outcome().decision() == Decision.DENIED) {
+            return arbitration.outcome();
+        }
+
+        return cofferRuntime.execute(
+                new ExecutionPlanId(requestId + ":fabric-execution-plan"),
+                new ExecutionResultId(requestId + ":fabric-execution-result"),
+                arbitration.mutationPlan(),
+                executionStepIds(requestId, arbitration.mutationPlan().mutations().size()),
+                runtimeAuthorities,
+                exchangeRequest.metadata());
+    }
+
+    private void requireServerThread() {
+        MinecraftServer currentServer = server;
+        if (currentServer != null && !currentServer.isOnThread()) {
+            throw new IllegalStateException("exchange execution must occur on the Minecraft server thread");
+        }
+    }
+
     private Optional<List<ItemStack>> resolvePlayerInventorySlots(
             UUID playerId,
             MinecraftPlayerInventoryContainer.Region region) {
@@ -116,5 +162,21 @@ final class CofferMinecraftFabricService {
             case ARMOR -> inventory.armor;
             case OFFHAND -> inventory.offHand;
         };
+    }
+
+    private static List<ReasonId> denialReasonIds(String requestId) {
+        List<ReasonId> reasonIds = new ArrayList<>();
+        for (int index = 0; index < 256; index++) {
+            reasonIds.add(new ReasonId(requestId + ":fabric-denial-reason-" + index));
+        }
+        return List.copyOf(reasonIds);
+    }
+
+    private static List<ExecutionStepId> executionStepIds(String requestId, int count) {
+        List<ExecutionStepId> stepIds = new ArrayList<>();
+        for (int index = 0; index < count; index++) {
+            stepIds.add(new ExecutionStepId(requestId + ":fabric-execution-step-" + index));
+        }
+        return List.copyOf(stepIds);
     }
 }
