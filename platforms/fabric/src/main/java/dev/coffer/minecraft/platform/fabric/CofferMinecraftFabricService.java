@@ -2,12 +2,19 @@ package dev.coffer.minecraft.platform.fabric;
 
 import dev.coffer.minecraft.bindings.inventory.MinecraftContainerResolver;
 import dev.coffer.minecraft.bindings.inventory.MinecraftDescriptorFactory;
+import dev.coffer.minecraft.bindings.inventory.MinecraftPlayerInventoryContainer;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadFactory;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadInterpreter;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimeValueSetResolver;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.ItemStack;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.PlayerManager;
+import net.minecraft.server.network.ServerPlayerEntity;
 import org.coffer.core.authority.AuthorityResolver;
 import org.coffer.core.authority.ResolutionResult;
 import org.coffer.core.model.support.OpaqueObject;
@@ -25,11 +32,12 @@ final class CofferMinecraftFabricService {
     private final TransferableValueRuntimeAuthority transferableValueRuntimeAuthority;
     private final AuthorityResolver coreAuthorityResolver;
     private final List<RuntimeAuthority> runtimeAuthorities;
+    private MinecraftServer server;
     private boolean initialized;
 
     CofferMinecraftFabricService() {
         MinecraftContainerResolver containerResolver =
-                new MinecraftContainerResolver((playerId, region) -> Optional.empty());
+                new MinecraftContainerResolver(this::resolvePlayerInventorySlots);
         MinecraftDescriptorFactory descriptorFactory = new MinecraftDescriptorFactory();
         MinecraftRuntimePayloadFactory runtimePayloadFactory = new MinecraftRuntimePayloadFactory();
         MinecraftRuntimeValueSetResolver runtimeValueSetResolver = new MinecraftRuntimeValueSetResolver();
@@ -60,11 +68,49 @@ final class CofferMinecraftFabricService {
         LOGGER.log(System.Logger.Level.INFO, "Coffer authorities wired");
     }
 
+    void attachServer(MinecraftServer server) {
+        this.server = server;
+    }
+
     void shutdown() {
+        server = null;
         initialized = false;
     }
 
     boolean initialized() {
         return initialized;
+    }
+
+    private Optional<List<ItemStack>> resolvePlayerInventorySlots(
+            UUID playerId,
+            MinecraftPlayerInventoryContainer.Region region) {
+        MinecraftServer currentServer = server;
+        if (currentServer == null || !currentServer.isOnThread()) {
+            return Optional.empty();
+        }
+
+        PlayerManager playerManager = currentServer.getPlayerManager();
+        if (playerManager == null) {
+            return Optional.empty();
+        }
+
+        ServerPlayerEntity player = playerManager.getPlayer(playerId);
+        if (player == null) {
+            return Optional.empty();
+        }
+
+        PlayerInventory inventory = player.getInventory();
+        return Optional.of(slotsForRegion(inventory, region));
+    }
+
+    private static List<ItemStack> slotsForRegion(
+            PlayerInventory inventory,
+            MinecraftPlayerInventoryContainer.Region region) {
+        return switch (region) {
+            case MAIN -> inventory.main.subList(PlayerInventory.getHotbarSize(), inventory.main.size());
+            case HOTBAR -> inventory.main.subList(0, PlayerInventory.getHotbarSize());
+            case ARMOR -> inventory.armor;
+            case OFFHAND -> inventory.offHand;
+        };
     }
 }
