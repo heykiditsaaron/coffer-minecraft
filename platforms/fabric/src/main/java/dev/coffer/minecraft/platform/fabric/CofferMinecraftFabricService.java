@@ -7,6 +7,7 @@ import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadFactory;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadInterpreter;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimeValueSetResolver;
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +47,8 @@ final class CofferMinecraftFabricService {
     private final List<RuntimeAuthority> runtimeAuthorities;
     private MinecraftServer server;
     private boolean initialized;
+
+    private record PlatformUnavailableResult(String reasonCode) {}
 
     CofferMinecraftFabricService() {
         MinecraftContainerResolver containerResolver =
@@ -122,6 +125,48 @@ final class CofferMinecraftFabricService {
                 executionStepIds(requestId, arbitration.mutationPlan().mutations().size()),
                 runtimeAuthorities,
                 exchangeRequest.metadata());
+    }
+
+    CompletableFuture<Object> executeExchangeScheduled(ExchangeRequest exchangeRequest) {
+        Objects.requireNonNull(exchangeRequest, "exchangeRequest");
+
+        MinecraftServer currentServer = server;
+        if (currentServer == null) {
+            return CompletableFuture.completedFuture(platformUnavailable("SERVER_UNAVAILABLE"));
+        }
+
+        CompletableFuture<Object> result = new CompletableFuture<>();
+        if (currentServer.isOnThread()) {
+            completeExchange(result, exchangeRequest, currentServer);
+            return result;
+        }
+
+        try {
+            currentServer.execute(() -> completeExchange(result, exchangeRequest, currentServer));
+        } catch (RuntimeException exception) {
+            result.complete(platformUnavailable("SERVER_SCHEDULING_UNAVAILABLE"));
+        }
+        return result;
+    }
+
+    private void completeExchange(
+            CompletableFuture<Object> result,
+            ExchangeRequest exchangeRequest,
+            MinecraftServer expectedServer) {
+        if (server != expectedServer) {
+            result.complete(platformUnavailable("SERVER_UNAVAILABLE"));
+            return;
+        }
+
+        try {
+            result.complete(executeExchange(exchangeRequest));
+        } catch (RuntimeException exception) {
+            result.completeExceptionally(exception);
+        }
+    }
+
+    private static PlatformUnavailableResult platformUnavailable(String reasonCode) {
+        return new PlatformUnavailableResult(reasonCode);
     }
 
     private void requireServerThread() {
