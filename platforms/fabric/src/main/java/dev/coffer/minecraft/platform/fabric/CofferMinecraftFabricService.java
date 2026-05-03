@@ -48,8 +48,6 @@ final class CofferMinecraftFabricService {
     private MinecraftServer server;
     private boolean initialized;
 
-    private record PlatformUnavailableResult(String reasonCode) {}
-
     CofferMinecraftFabricService() {
         MinecraftContainerResolver containerResolver =
                 new MinecraftContainerResolver(this::resolvePlayerInventorySlots);
@@ -100,7 +98,7 @@ final class CofferMinecraftFabricService {
         return initialized;
     }
 
-    Object executeExchange(ExchangeRequest exchangeRequest) {
+    FabricCofferExecutionResult executeExchange(ExchangeRequest exchangeRequest) {
         Objects.requireNonNull(exchangeRequest, "exchangeRequest");
         requireServerThread();
 
@@ -115,19 +113,19 @@ final class CofferMinecraftFabricService {
                 exchangeRequest.metadata());
 
         if (arbitration.outcome().decision() == Decision.DENIED) {
-            return arbitration.outcome();
+            return new FabricCofferExecutionResult.Denied(arbitration.outcome());
         }
 
-        return cofferRuntime.execute(
+        return new FabricCofferExecutionResult.Executed(cofferRuntime.execute(
                 new ExecutionPlanId(requestId + ":fabric-execution-plan"),
                 new ExecutionResultId(requestId + ":fabric-execution-result"),
                 arbitration.mutationPlan(),
                 executionStepIds(requestId, arbitration.mutationPlan().mutations().size()),
                 runtimeAuthorities,
-                exchangeRequest.metadata());
+                exchangeRequest.metadata()));
     }
 
-    CompletableFuture<Object> executeExchangeScheduled(ExchangeRequest exchangeRequest) {
+    CompletableFuture<FabricCofferExecutionResult> executeExchangeScheduled(ExchangeRequest exchangeRequest) {
         Objects.requireNonNull(exchangeRequest, "exchangeRequest");
 
         MinecraftServer currentServer = server;
@@ -135,7 +133,7 @@ final class CofferMinecraftFabricService {
             return CompletableFuture.completedFuture(platformUnavailable("SERVER_UNAVAILABLE"));
         }
 
-        CompletableFuture<Object> result = new CompletableFuture<>();
+        CompletableFuture<FabricCofferExecutionResult> result = new CompletableFuture<>();
         if (currentServer.isOnThread()) {
             completeExchange(result, exchangeRequest, currentServer);
             return result;
@@ -150,7 +148,7 @@ final class CofferMinecraftFabricService {
     }
 
     private void completeExchange(
-            CompletableFuture<Object> result,
+            CompletableFuture<FabricCofferExecutionResult> result,
             ExchangeRequest exchangeRequest,
             MinecraftServer expectedServer) {
         if (server != expectedServer) {
@@ -165,8 +163,8 @@ final class CofferMinecraftFabricService {
         }
     }
 
-    private static PlatformUnavailableResult platformUnavailable(String reasonCode) {
-        return new PlatformUnavailableResult(reasonCode);
+    private static FabricCofferExecutionResult.Unavailable platformUnavailable(String reasonCode) {
+        return new FabricCofferExecutionResult.Unavailable(reasonCode);
     }
 
     private void requireServerThread() {
