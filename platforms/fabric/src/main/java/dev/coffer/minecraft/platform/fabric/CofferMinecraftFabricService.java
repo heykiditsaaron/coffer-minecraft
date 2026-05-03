@@ -98,6 +98,10 @@ final class CofferMinecraftFabricService {
         return initialized;
     }
 
+    public CompletableFuture<FabricCofferExecutionResult> submitExchange(ExchangeRequest request) {
+        return executeExchangeScheduled(request);
+    }
+
     FabricCofferExecutionResult executeExchange(ExchangeRequest exchangeRequest) {
         Objects.requireNonNull(exchangeRequest, "exchangeRequest");
         requireServerThread();
