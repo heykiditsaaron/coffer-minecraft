@@ -72,8 +72,12 @@ final class CofferMinecraftFabricService {
         this.server = server;
     }
 
-    void shutdown() {
+    void detachServer() {
         server = null;
+    }
+
+    void shutdown() {
+        detachServer();
         initialized = false;
     }
 
