@@ -4,7 +4,7 @@ import java.util.Objects;
 import org.coffer.core.model.outcome.Outcome;
 import org.coffer.runtime.model.execution.ExecutionResult;
 
-sealed interface FabricCofferExecutionResult
+public sealed interface FabricCofferExecutionResult
         permits FabricCofferExecutionResult.Denied,
                 FabricCofferExecutionResult.Executed,
                 FabricCofferExecutionResult.Unavailable {

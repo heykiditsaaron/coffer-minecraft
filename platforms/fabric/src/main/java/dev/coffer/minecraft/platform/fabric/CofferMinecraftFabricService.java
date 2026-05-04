@@ -36,7 +36,7 @@ import org.coffer.runtime.model.id.ExecutionPlanId;
 import org.coffer.runtime.model.id.ExecutionResultId;
 import org.coffer.runtime.model.id.ExecutionStepId;
 
-final class CofferMinecraftFabricService {
+final class CofferMinecraftFabricService implements CofferMinecraftExchangeService {
     private static final System.Logger LOGGER =
             System.getLogger(CofferMinecraftFabricService.class.getName());
 
@@ -98,6 +98,7 @@ final class CofferMinecraftFabricService {
         return initialized;
     }
 
+    @Override
     public CompletableFuture<FabricCofferExecutionResult> submitExchange(ExchangeRequest request) {
         return executeExchangeScheduled(request);
     }
