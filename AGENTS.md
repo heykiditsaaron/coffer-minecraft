@@ -1,130 +1,158 @@
-# AGENTS.md
+# Coffer Minecraft — Agent Instructions
 
-## Core Workflow
+This file defines repository-specific constraints for the coffer-minecraft platform.
 
-All work in this repository MUST follow:
-
-Design → Journal → Implement → Verify → Commit
-
-- Journal entries MUST be written before commit.
-- Do not skip steps.
-- Do not batch unrelated changes.
+Global rules from ~/.codex/AGENTS.md apply.
 
 ---
 
-## Repository Structure & Boundaries
+## Purpose
 
-### bindings/inventory
-Owns:
-- Minecraft inventory semantics
-- Descriptor, matcher, container logic
+This repository provides a Fabric platform implementation of the Coffer TransferableValue system.
 
-Must NOT:
-- Include platform/lifecycle/threading logic
-- Depend on Fabric APIs
-- Perform runtime wiring
+It owns:
+- Minecraft inventory-backed value semantics (bindings/inventory)
+- Fabric lifecycle, wiring, and execution surface (platforms/fabric)
+
+It exposes a safe execution boundary for external adapters.
 
 ---
 
-### platforms/fabric
-Owns:
-- Lifecycle (startup/shutdown)
-- Authority wiring
-- Player inventory resolution
-- Server-thread execution
+## Core Architecture
 
-Must NOT:
-- Implement inventory logic
-- Duplicate binding behavior
-- Interpret descriptors beyond delegation
+This repository is divided into:
 
----
+- bindings/inventory
+  Owns inventory descriptors, matching, containers, and mutation behavior.
 
-## Non-Negotiable Rules
+- platforms/fabric
+  Owns lifecycle, authority wiring, player resolution, threading, and execution surface.
 
-- Do NOT duplicate logic across layers
-- Do NOT move logic from bindings → platform
-- Do NOT introduce hidden behavior
-- Do NOT invent behavior not defined in journals
-- Do NOT weaken existing guarantees
+- adapters (external, NOT in this repo)
+  Consume the platform via the public service interface.
 
 ---
 
-## Descriptor Rules
+## Authority Boundaries
 
-- Identity = item id + full NBT
-- Quantity is NOT identity
-- No fuzzy matching
-- No partial NBT matching
-- No display text as truth
-- NBT must be preserved, not normalized
+- TransferableValueAuthority implementations exist ONLY in bindings/inventory.
+- platforms/fabric MUST NOT reimplement inventory or value semantics.
+- External adapters MUST NOT implement authorities.
 
 ---
 
-## Container Rules
+## Execution Boundary
 
-Must implement:
-- canRemove
-- canReceive
-- simulateAtomicSwap
-- applyAtomicSwap
+All exchange execution flows through:
 
-Requirements:
-- Simulation MUST NOT mutate state
-- Application MUST be guarded by simulation
-- No success on partial or uncertain execution
-- Post-simulation drift MUST return non-success (not success)
-- No rollback or retry unless explicitly designed
+CofferMinecraftExchangeService.submitExchange(...)
+
+This is the ONLY supported entry point for external consumers.
 
 ---
 
 ## Threading Rules
 
-- ALL inventory mutation MUST occur on the Minecraft server thread
-- Off-thread calls MUST be scheduled onto the server thread
-- Never mutate inventory off-thread
+- All execution must occur on the Minecraft server thread.
+- platforms/fabric owns scheduling.
+- Off-thread execution must be scheduled or rejected.
+- No direct inventory mutation may occur off-thread.
 
 ---
 
-## Error Semantics
+## Result Semantics
 
-- Failed = known, deterministic denial
-- Unknown = state cannot be safely determined
+FabricCofferExecutionResult defines the execution boundary:
 
-Do NOT:
-- Collapse Unknown into Failed
-- Return success under uncertainty
+- Denied → Core refusal (no runtime execution)
+- Executed → Runtime attempted execution
+- Unavailable → Platform could not safely attempt execution
 
----
+Critical rule:
 
-## Testing Rules
+Non-success MUST NOT be interpreted as “no mutation occurred”.
 
-- All behavior MUST have tests
-- Simulation MUST be verified as non-mutating
-- Application MUST be verified as guarded
-- E2E Core → Runtime → Binding path MUST remain valid
+Inventory may have partially changed due to post-simulation drift.
 
 ---
 
-## Tooling Constraints
+## Platform Responsibilities
 
-- Access widener is test-only
-- `-Xverify:none` is test-only
-- These MUST NOT become production requirements
+platforms/fabric is responsible for:
+
+- Fabric lifecycle integration
+- Authority construction and wiring
+- Player inventory resolution
+- Server-thread scheduling
+- Exposing the adapter-facing execution service
+
+platforms/fabric MUST NOT:
+
+- implement gameplay logic
+- define player interaction behavior
+- introduce adapter-specific assumptions
 
 ---
 
-## Explicit Non-Goals
+## Binding Responsibilities
 
-Do NOT implement:
-- Player-trade adapters
-- Commands/UI
-- Persistence
-- Gameplay-facing logic
+bindings/inventory is responsible for:
+
+- Descriptor parsing and validation
+- Item and NBT matching
+- Container mutation behavior
+- Simulation and guarded application
+
+bindings/inventory MUST NOT:
+
+- depend on Fabric lifecycle
+- perform scheduling
+- expose platform-specific behavior
 
 ---
 
-## Design Authority
+## Adapter Relationship
 
-- Journals are the source of truth for behavior
-- If behavior is unclear → STOP and design before implementing
+Adapters are external consumers.
+
+This repository MUST:
+
+- expose a minimal, stable execution surface
+- avoid leaking internal implementation details
+- avoid expanding API surface prematurely
+
+This repository MUST NOT:
+
+- implement player-trade logic
+- define UI or commands
+- define messaging behavior
+
+---
+
+## Known Constraints
+
+- No rollback or retry exists.
+- Partial mutation is possible under drift conditions.
+- Result diagnostics are intentionally minimal.
+- Service discovery is Fabric-entrypoint-based.
+- Test tooling in bindings includes access widener and -Xverify:none.
+
+---
+
+## Development Discipline
+
+- Maintain strict separation between binding, platform, and adapter concerns.
+- Do not introduce cross-layer shortcuts.
+- Do not duplicate logic across modules.
+- Do not expand public API without clear adapter need.
+
+---
+
+## Outcome
+
+This repository must remain:
+
+- platform-agnostic at the Core level
+- platform-specific only at the Fabric layer
+- authoritative for inventory-backed value exchange
+- safe and predictable for external adapter consumption
