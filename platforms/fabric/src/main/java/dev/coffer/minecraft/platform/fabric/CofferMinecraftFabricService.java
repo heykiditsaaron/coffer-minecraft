@@ -132,9 +132,10 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
                 denialReasonIds(requestId),
                 exchangeRequest.metadata());
         LOGGER.info(
-                "Fabric arbitration completed; requestId={}, decision={}",
+                "Fabric arbitration completed; requestId={}, decision={}, hasMutationPlan={}",
                 requestId,
-                arbitration.outcome().decision());
+                arbitration.outcome().decision(),
+                arbitration.mutationPlan() != null);
 
         if (arbitration.outcome().decision() == Decision.DENIED) {
             LOGGER.info("Fabric arbitration denied exchange; requestId={}", requestId);
