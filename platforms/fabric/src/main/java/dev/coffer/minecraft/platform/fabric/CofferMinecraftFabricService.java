@@ -7,16 +7,18 @@ import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadFactory;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimePayloadInterpreter;
 import dev.coffer.minecraft.bindings.inventory.MinecraftRuntimeValueSetResolver;
 import java.util.ArrayList;
-import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.coffer.core.arbitration.ArbitrationResult;
 import org.coffer.core.arbitration.CofferCore;
@@ -35,16 +37,20 @@ import org.coffer.runtime.authority.RuntimeAuthority;
 import org.coffer.runtime.model.id.ExecutionPlanId;
 import org.coffer.runtime.model.id.ExecutionResultId;
 import org.coffer.runtime.model.id.ExecutionStepId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class CofferMinecraftFabricService implements CofferMinecraftExchangeService {
-    private static final System.Logger LOGGER =
-            System.getLogger(CofferMinecraftFabricService.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(CofferMinecraftFabricService.class);
 
     private final CofferRuntime cofferRuntime;
     private final TransferableValueCoreAuthority transferableValueCoreAuthority;
     private final TransferableValueRuntimeAuthority transferableValueRuntimeAuthority;
     private final AuthorityResolver coreAuthorityResolver;
     private final List<RuntimeAuthority> runtimeAuthorities;
+    private final Queue<PendingExchange> pendingExchanges = new ConcurrentLinkedQueue<>();
+    private final ThreadLocal<Boolean> drainingExchangeQueue =
+            ThreadLocal.withInitial(() -> Boolean.FALSE);
     private MinecraftServer server;
     private boolean initialized;
 
@@ -77,19 +83,23 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
 
     void initialize() {
         initialized = true;
-        LOGGER.log(System.Logger.Level.INFO, "Coffer Fabric platform initialized");
-        LOGGER.log(System.Logger.Level.INFO, "Coffer authorities wired");
+        LOGGER.info("Coffer Fabric platform initialized");
+        LOGGER.info("Coffer authorities wired");
     }
 
     void attachServer(MinecraftServer server) {
         this.server = server;
+        LOGGER.info("Coffer Fabric platform attached server");
     }
 
     void detachServer() {
         server = null;
+        completePendingUnavailable("SERVER_DETACHED");
+        LOGGER.info("Coffer Fabric platform detached server");
     }
 
     void shutdown() {
+        completePendingUnavailable("SERVICE_SHUTDOWN");
         detachServer();
         initialized = false;
     }
@@ -100,7 +110,9 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
 
     @Override
     public CompletableFuture<FabricCofferExecutionResult> submitExchange(ExchangeRequest request) {
-        return executeExchangeScheduled(request);
+        Objects.requireNonNull(request, "request");
+        LOGGER.info("Fabric called; requestId={}", request.requestId().value());
+        return enqueueExchange(request);
     }
 
     FabricCofferExecutionResult executeExchange(ExchangeRequest exchangeRequest) {
@@ -108,7 +120,9 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
         requireServerThread();
 
         String requestId = exchangeRequest.requestId().value();
+        LOGGER.info("Fabric exchange execution entered; requestId={}", requestId);
         MutationPlanId mutationPlanId = new MutationPlanId(requestId + ":fabric-mutation-plan");
+        LOGGER.info("Fabric arbitration starting; requestId={}", requestId);
         ArbitrationResult arbitration = CofferCore.arbitrate(
                 exchangeRequest,
                 coreAuthorityResolver,
@@ -116,55 +130,110 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
                 mutationPlanId,
                 denialReasonIds(requestId),
                 exchangeRequest.metadata());
+        LOGGER.info(
+                "Fabric arbitration completed; requestId={}, decision={}, mutationCount={}",
+                requestId,
+                arbitration.outcome().decision(),
+                arbitration.mutationPlan().mutations().size());
 
         if (arbitration.outcome().decision() == Decision.DENIED) {
             return new FabricCofferExecutionResult.Denied(arbitration.outcome());
         }
 
-        return new FabricCofferExecutionResult.Executed(cofferRuntime.execute(
+        LOGGER.info("Fabric runtime execution starting; requestId={}", requestId);
+        FabricCofferExecutionResult.Executed executed = new FabricCofferExecutionResult.Executed(cofferRuntime.execute(
                 new ExecutionPlanId(requestId + ":fabric-execution-plan"),
                 new ExecutionResultId(requestId + ":fabric-execution-result"),
                 arbitration.mutationPlan(),
                 executionStepIds(requestId, arbitration.mutationPlan().mutations().size()),
                 runtimeAuthorities,
                 exchangeRequest.metadata()));
+        LOGGER.info(
+                "Fabric runtime execution completed; requestId={}, status={}",
+                requestId,
+                executed.result().status());
+        return executed;
     }
 
-    CompletableFuture<FabricCofferExecutionResult> executeExchangeScheduled(ExchangeRequest exchangeRequest) {
+    CompletableFuture<FabricCofferExecutionResult> enqueueExchange(ExchangeRequest exchangeRequest) {
         Objects.requireNonNull(exchangeRequest, "exchangeRequest");
+        String requestId = exchangeRequest.requestId().value();
+        LOGGER.info("Fabric exchange enqueue entered; requestId={}", requestId);
 
         MinecraftServer currentServer = server;
+        LOGGER.info(
+                "Fabric exchange enqueue server snapshot resolved; requestId={}, hasServer={}, callerThread={}",
+                requestId,
+                currentServer != null,
+                Thread.currentThread().getName());
         if (currentServer == null) {
+            LOGGER.warn("Fabric exchange enqueue unavailable; requestId={}, reasonCode=SERVER_UNAVAILABLE", requestId);
             return CompletableFuture.completedFuture(platformUnavailable("SERVER_UNAVAILABLE"));
         }
 
         CompletableFuture<FabricCofferExecutionResult> result = new CompletableFuture<>();
-        if (currentServer.isOnThread()) {
-            completeExchange(result, exchangeRequest, currentServer);
+        PendingExchange pendingExchange = new PendingExchange(exchangeRequest, result);
+        pendingExchanges.add(pendingExchange);
+        if (server != currentServer && pendingExchanges.remove(pendingExchange)) {
+            LOGGER.warn("Fabric exchange enqueue unavailable after server detach; requestId={}, reasonCode=SERVER_DETACHED", requestId);
+            result.complete(platformUnavailable("SERVER_DETACHED"));
             return result;
         }
-
-        try {
-            currentServer.execute(() -> completeExchange(result, exchangeRequest, currentServer));
-        } catch (RuntimeException exception) {
-            result.complete(platformUnavailable("SERVER_SCHEDULING_UNAVAILABLE"));
-        }
+        LOGGER.info(
+                "Fabric exchange enqueued for server tick; requestId={}, serverHash={}",
+                requestId,
+                System.identityHashCode(currentServer));
         return result;
     }
 
+    void drainPendingExchanges(MinecraftServer tickServer) {
+        Objects.requireNonNull(tickServer, "tickServer");
+
+        PendingExchange pendingExchange;
+        while ((pendingExchange = pendingExchanges.poll()) != null) {
+            completeExchange(pendingExchange.request(), tickServer, pendingExchange.future());
+        }
+    }
+
     private void completeExchange(
-            CompletableFuture<FabricCofferExecutionResult> result,
             ExchangeRequest exchangeRequest,
-            MinecraftServer expectedServer) {
-        if (server != expectedServer) {
+            MinecraftServer tickServer,
+            CompletableFuture<FabricCofferExecutionResult> result) {
+        String requestId = exchangeRequest.requestId().value();
+        LOGGER.info(
+                "Fabric queued exchange task entered; requestId={}, taskThread={}, serverStillAttached={}",
+                requestId,
+                Thread.currentThread().getName(),
+                server == tickServer);
+        if (server != tickServer) {
+            LOGGER.warn("Fabric queued exchange unavailable during task; requestId={}, reasonCode=SERVER_UNAVAILABLE", requestId);
             result.complete(platformUnavailable("SERVER_UNAVAILABLE"));
             return;
         }
 
+        boolean previousDraining = drainingExchangeQueue.get();
+        drainingExchangeQueue.set(Boolean.TRUE);
         try {
-            result.complete(executeExchange(exchangeRequest));
-        } catch (RuntimeException exception) {
-            result.completeExceptionally(exception);
+            FabricCofferExecutionResult executionResult = executeExchange(exchangeRequest);
+            LOGGER.info(
+                    "Fabric queued exchange completing future; requestId={}, resultType={}",
+                    requestId,
+                    executionResult.getClass().getSimpleName());
+            result.complete(executionResult);
+        } catch (Throwable throwable) {
+            LOGGER.error("Fabric queued exchange completing future exceptionally; requestId={}", requestId, throwable);
+            result.completeExceptionally(throwable);
+        } finally {
+            drainingExchangeQueue.set(previousDraining);
+        }
+    }
+
+    private void completePendingUnavailable(String reasonCode) {
+        PendingExchange pendingExchange;
+        while ((pendingExchange = pendingExchanges.poll()) != null) {
+            String requestId = pendingExchange.request().requestId().value();
+            LOGGER.warn("Fabric queued exchange unavailable during detach; requestId={}, reasonCode={}", requestId, reasonCode);
+            pendingExchange.future().complete(platformUnavailable(reasonCode));
         }
     }
 
@@ -173,8 +242,7 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
     }
 
     private void requireServerThread() {
-        MinecraftServer currentServer = server;
-        if (currentServer != null && !currentServer.isOnThread()) {
+        if (!drainingExchangeQueue.get()) {
             throw new IllegalStateException("exchange execution must occur on the Minecraft server thread");
         }
     }
@@ -183,22 +251,15 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
             UUID playerId,
             MinecraftPlayerInventoryContainer.Region region) {
         MinecraftServer currentServer = server;
-        if (currentServer == null || !currentServer.isOnThread()) {
+        if (currentServer == null || !drainingExchangeQueue.get()) {
             return Optional.empty();
         }
 
-        PlayerManager playerManager = currentServer.getPlayerManager();
-        if (playerManager == null) {
-            return Optional.empty();
-        }
-
-        ServerPlayerEntity player = playerManager.getPlayer(playerId);
-        if (player == null) {
-            return Optional.empty();
-        }
-
-        PlayerInventory inventory = player.getInventory();
-        return Optional.of(slotsForRegion(inventory, region));
+        return PlayerLookup.all(currentServer).stream()
+                .filter(player -> player.getUuid().equals(playerId))
+                .findFirst()
+                .map(ServerPlayerEntity::getInventory)
+                .map(inventory -> slotsForRegion(inventory, region));
     }
 
     private static List<ItemStack> slotsForRegion(
@@ -226,5 +287,10 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
             stepIds.add(new ExecutionStepId(requestId + ":fabric-execution-step-" + index));
         }
         return List.copyOf(stepIds);
+    }
+
+    private record PendingExchange(
+            ExchangeRequest request,
+            CompletableFuture<FabricCofferExecutionResult> future) {
     }
 }
