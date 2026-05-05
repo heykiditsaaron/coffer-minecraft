@@ -27,6 +27,7 @@ import org.coffer.core.authority.ResolutionResult;
 import org.coffer.core.model.id.MutationPlanId;
 import org.coffer.core.model.id.OutcomeId;
 import org.coffer.core.model.id.ReasonId;
+import org.coffer.core.model.mutation.MutationPlan;
 import org.coffer.core.model.outcome.Decision;
 import org.coffer.core.model.request.ExchangeRequest;
 import org.coffer.core.model.support.OpaqueObject;
@@ -131,21 +132,33 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
                 denialReasonIds(requestId),
                 exchangeRequest.metadata());
         LOGGER.info(
-                "Fabric arbitration completed; requestId={}, decision={}, mutationCount={}",
+                "Fabric arbitration completed; requestId={}, decision={}",
                 requestId,
-                arbitration.outcome().decision(),
-                arbitration.mutationPlan().mutations().size());
+                arbitration.outcome().decision());
 
         if (arbitration.outcome().decision() == Decision.DENIED) {
+            LOGGER.info("Fabric arbitration denied exchange; requestId={}", requestId);
             return new FabricCofferExecutionResult.Denied(arbitration.outcome());
         }
 
+        MutationPlan mutationPlan = arbitration.mutationPlan();
+        if (mutationPlan == null) {
+            LOGGER.error(
+                    "Fabric arbitration approved exchange without mutation plan; requestId={}, reasonCode=APPROVED_WITHOUT_MUTATION_PLAN",
+                    requestId);
+            return platformUnavailable("APPROVED_WITHOUT_MUTATION_PLAN");
+        }
+
+        LOGGER.info(
+                "Fabric arbitration approved exchange; requestId={}, mutationCount={}",
+                requestId,
+                mutationPlan.mutations().size());
         LOGGER.info("Fabric runtime execution starting; requestId={}", requestId);
         FabricCofferExecutionResult.Executed executed = new FabricCofferExecutionResult.Executed(cofferRuntime.execute(
                 new ExecutionPlanId(requestId + ":fabric-execution-plan"),
                 new ExecutionResultId(requestId + ":fabric-execution-result"),
-                arbitration.mutationPlan(),
-                executionStepIds(requestId, arbitration.mutationPlan().mutations().size()),
+                mutationPlan,
+                executionStepIds(requestId, mutationPlan.mutations().size()),
                 runtimeAuthorities,
                 exchangeRequest.metadata()));
         LOGGER.info(
