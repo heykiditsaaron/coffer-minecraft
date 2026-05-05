@@ -7,7 +7,7 @@ dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
 
-    implementation project(':bindings:inventory')
+    implementation project(path: ':bindings:inventory', configuration: 'namedElements')
     implementation 'dev.coffer:coffer-core:1.0.0'
     implementation 'dev.coffer:coffer-runtime:1.0.0'
     implementation 'dev.coffer:coffer-transferable-value-authority:1.0.0'

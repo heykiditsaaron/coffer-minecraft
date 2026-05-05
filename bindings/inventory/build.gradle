@@ -21,6 +21,25 @@ test {
     jvmArgs '-Xverify:none'
 }
 
+def namedJar = tasks.named('jar')
+def namedJarFile = file("$buildDir/devlibs/${project.name}-dev.jar")
+
+['apiElements', 'namedElements', 'runtimeElements'].each { variantName ->
+    configurations.named(variantName) {
+        outgoing.artifacts.clear()
+    }
+}
+
+afterEvaluate {
+    ['apiElements', 'namedElements', 'runtimeElements'].each { variantName ->
+        configurations.named(variantName) {
+            outgoing.artifact(namedJarFile) {
+                builtBy(namedJar)
+            }
+        }
+    }
+}
+
 loom {
     accessWidenerPath = file('src/main/resources/coffer-minecraft.accesswidener')
 }
