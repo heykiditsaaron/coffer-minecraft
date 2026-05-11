@@ -154,6 +154,94 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         assertTrue(lines.stream().noneMatch(line -> line.contains("\"history\":")));
     }
 
+    @Test
+    void interleavedLineagesRemainReconstructableFromIdentityAndAppendOrder() throws IOException {
+        Path target = GhostAdapterAccountabilityJsonlEmitter.cofferLogPath(tempDir.resolve("logs"), "ghost.jsonl");
+        List<Map<String, Object>> failureRecords =
+                records("interaction-30", ProjectionKind.RUNTIME_FAILURE, "minecraft.value.not_removable");
+        List<Map<String, Object>> unknownRecords =
+                records("interaction-31", ProjectionKind.RUNTIME_UNKNOWN, "MALFORMED_RUNTIME_DESCRIPTOR");
+        List<Map<String, Object>> successRecords =
+                records("interaction-32", ProjectionKind.RUNTIME_SUCCESS, null);
+
+        GhostAdapterAccountabilityJsonlEmitter.append(target, List.of(failureRecords.get(0)));
+        GhostAdapterAccountabilityJsonlEmitter.append(target, List.of(unknownRecords.get(0)));
+        GhostAdapterAccountabilityJsonlEmitter.append(target, List.of(successRecords.get(0)));
+        GhostAdapterAccountabilityJsonlEmitter.append(target, List.of(failureRecords.get(1)));
+        GhostAdapterAccountabilityJsonlEmitter.append(target, List.of(unknownRecords.get(1)));
+        GhostAdapterAccountabilityJsonlEmitter.append(target, List.of(successRecords.get(1)));
+
+        List<String> lines = Files.readAllLines(target);
+
+        assertEquals(6, lines.size());
+        assertIterableEquals(
+                List.of(
+                        "interaction-30",
+                        "interaction-31",
+                        "interaction-32",
+                        "interaction-30",
+                        "interaction-31",
+                        "interaction-32"),
+                lines.stream().map(GhostAdapterAccountabilityJsonlEmitterTest::extractInteractionId).toList());
+        assertIterableEquals(
+                List.of(
+                        "captured",
+                        "captured",
+                        "captured",
+                        "runtime_failed",
+                        "runtime_unknown",
+                        "runtime_succeeded"),
+                lines.stream().map(GhostAdapterAccountabilityJsonlEmitterTest::extractStage).toList());
+        assertFalse(lines.get(0).contains("\"code\""));
+        assertFalse(lines.get(1).contains("\"code\""));
+        assertFalse(lines.get(2).contains("\"code\""));
+        assertTrue(lines.get(3).contains("\"code\":\"minecraft.value.not_removable\""));
+        assertTrue(lines.get(4).contains("\"code\":\"MALFORMED_RUNTIME_DESCRIPTOR\""));
+        assertFalse(lines.get(5).contains("\"code\""));
+    }
+
+    @Test
+    void denseMixedStreamPreservesReadabilityWithoutSchemaInflation() throws IOException {
+        Path target = GhostAdapterAccountabilityJsonlEmitter.cofferLogPath(tempDir.resolve("logs"), "ghost.jsonl");
+
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                GhostAdapterAccountabilityProjection.toJsonlRecords("interaction-40", constructionRefusedProjection()));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-41", ProjectionKind.CORE_DENIED, "minecraft.value.not_removable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-42", ProjectionKind.RUNTIME_UNKNOWN, "minecraft.container.unavailable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-43", ProjectionKind.RUNTIME_UNKNOWN, "MALFORMED_RUNTIME_DESCRIPTOR"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-44", ProjectionKind.RUNTIME_SUCCESS, null));
+
+        List<String> lines = Files.readAllLines(target);
+
+        assertEquals(9, lines.size());
+        assertIterableEquals(
+                List.of(
+                        "interaction-40",
+                        "interaction-41",
+                        "interaction-41",
+                        "interaction-42",
+                        "interaction-42",
+                        "interaction-43",
+                        "interaction-43",
+                        "interaction-44",
+                        "interaction-44"),
+                lines.stream().map(GhostAdapterAccountabilityJsonlEmitterTest::extractInteractionId).toList());
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"sequence\"")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"timeline\"")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"history\"")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"participation\"")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"runtime\":")));
+    }
+
     private static List<Map<String, Object>> records(
             String interactionId,
             ProjectionKind kind,
