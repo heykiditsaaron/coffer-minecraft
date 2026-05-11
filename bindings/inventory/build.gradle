@@ -3,6 +3,12 @@ plugins {
     id 'fabric-loom' version "${loom_version}"
 }
 
+sourceSets {
+    test {
+        java.srcDir "${rootProject.projectDir}/test-support/ghost-adapter/src/main/java"
+    }
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
