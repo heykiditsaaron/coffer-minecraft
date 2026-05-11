@@ -1,121 +1,50 @@
 # Coffer Minecraft
 
-`coffer-minecraft` is the Fabric platform implementation of the Coffer TransferableValue system for Minecraft inventories.
+`coffer-minecraft` is the Minecraft super-platform repository.
 
-It provides Minecraft inventory-backed exchange execution and owns the Fabric lifecycle, Coffer wiring, server-thread scheduling, and the adapter-facing execution surface.
+It is the implementation space for Minecraft-specific bindings, platform modules,
+contracts, integration guidance, and tests. It is not the substrate home for
+Core, Runtime, or TransferableValue authority logic.
 
-## What This Is Not
+## Current Focus
 
-This project is not:
+This repository is in controlled re-foundation.
 
-- a gameplay system
-- a player-trade implementation
-- a UI or command layer
-- a permission system
+Current work should stay focused on:
 
-Gameplay adapters are expected to live outside this repository and consume the public Fabric service.
+- repository structure
+- boundary documentation
+- migration guidance
+- lightweight scaffolding
 
-## Architecture
+The current inventory and Fabric source remains available as migration/reference
+material while repository boundaries and dependency expectations are stabilized.
 
-`bindings/inventory` owns Minecraft inventory semantics:
+## Intended Structure
 
-- item descriptors
-- item matching
-- player inventory containers
-- removability and receivability checks
-- atomic swap simulation and application
+- `bindings/inventory`: Minecraft inventory binding semantics
+- `platforms/fabric`: Fabric-specific platform module space
+- `docs/architecture`: repository-scoped architecture and boundaries
+- `docs/contracts`: Minecraft-specific contracts only
+- `docs/integration`: integration guidance with substrate repositories
+- `docs/journals`: chronological repository evolution records
 
-`platforms/fabric` owns Fabric integration:
+## Non-Goals
 
-- startup and shutdown lifecycle
-- Coffer service wiring
-- Minecraft server attachment
-- server-thread execution
-- public exchange submission
+This repository is not:
 
-Adapters are external consumers. They build Coffer requests and submit them through the Fabric service. They are not included in this repository.
+- `coffer-core`
+- `coffer-runtime`
+- `coffer-transferable-value-authority`
+- a generic adapter SDK
+- a platform-agnostic architecture repo
+- a gameplay workflow repo unless explicitly extended for a concrete
+  Minecraft-specific adapter
 
-## Core Flow
+## Dependency Direction
 
-At a high level:
+This repository consumes substrate repositories. It must not duplicate their
+models, orchestration, or authority behavior.
 
-1. An adapter builds an `ExchangeRequest`.
-2. The adapter calls `CofferMinecraftFabricEntrypoint.exchangeService().submitExchange(...)`.
-3. The Fabric service schedules execution on the Minecraft server thread when needed.
-4. Coffer Core arbitrates the exchange.
-5. Coffer Runtime executes through the Minecraft inventory binding.
-6. The caller receives a `FabricCofferExecutionResult`.
-
-## Public API
-
-The public adapter-facing service is:
-
-```text
-CofferMinecraftExchangeService
-```
-
-It exposes:
-
-```text
-CompletableFuture<FabricCofferExecutionResult> submitExchange(ExchangeRequest request)
-```
-
-Adapters discover the service through:
-
-```text
-CofferMinecraftFabricEntrypoint.exchangeService()
-```
-
-`FabricCofferExecutionResult` has three variants:
-
-- `Denied`: Coffer Core denied the exchange before runtime execution.
-- `Executed`: Coffer Runtime attempted the approved exchange.
-- `Unavailable`: Fabric could not safely attempt or continue execution.
-
-## Behavior Notes
-
-Exchange execution is asynchronous.
-
-Adapters may call `submitExchange(...)` from any thread. The Fabric service is responsible for server-thread scheduling before live inventory access occurs.
-
-Adapters must not construct Core, Runtime, authorities, or inventory containers directly.
-
-Adapters must not treat every non-success result as proof that no inventory changed. Execution is guarded, but rollback and retry are not implemented.
-
-## Example Usage
-
-Pseudo-code:
-
-```text
-request = buildExchangeRequest(...)
-
-future = CofferMinecraftFabricEntrypoint
-    .exchangeService()
-    .submitExchange(request)
-
-future.thenAccept(result -> {
-    switch result:
-        Denied:
-            handleCoreDenial(result.outcome)
-        Executed:
-            inspectRuntimeResult(result.result)
-        Unavailable:
-            handleUnavailableService(result.reasonCode)
-})
-```
-
-## Development Status
-
-The internal inventory binding and Fabric execution surface are in place.
-
-Adapter integration is ready through the public service interface.
-
-Gameplay adapters, including player-trade adapters, have not been implemented in this repository.
-
-## Known Limitations
-
-- No rollback support.
-- Partial mutation is possible if inventory state drifts during application.
-- Result diagnostics are intentionally limited.
-- No persistence layer.
-- Binding test tooling still carries test-only runtime debt.
+See [repository-repurposing-audit.md](/home/aaron/dev/coffer-minecraft/docs/architecture/repository-repurposing-audit.md)
+for the current re-foundation audit.

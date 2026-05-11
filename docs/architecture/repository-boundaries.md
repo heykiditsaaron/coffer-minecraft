@@ -1,7 +1,30 @@
 # Repository Boundaries
 
-The platform-neutral `coffer` repository owns Coffer Core, Coffer Runtime, and the first-party TransferableValueAuthority module.
+The authoritative substrate lives outside this repository.
 
-The `coffer-minecraft` repository owns Minecraft-specific bindings, gameplay adapters, and platform glue. This includes adapting Minecraft inventory and interaction semantics to the platform-neutral authority and runtime contracts provided by `coffer`.
+Substrate ownership belongs to separate repositories, including:
 
-No platform-neutral Coffer logic should be reimplemented in this repository. This repository should consume published or local artifacts from `coffer` once artifact coordinates and API contracts are confirmed.
+- `coffer-core`
+- `coffer-runtime`
+- `coffer-transferable-value-authority`
+
+`coffer-minecraft` owns Minecraft-specific platform work only.
+
+That includes:
+
+- Minecraft inventory binding semantics
+- Fabric-specific platform integration
+- Minecraft-specific contracts and integration documentation
+- Minecraft-specific tests and fixtures
+
+This repository does not own:
+
+- Core arbitration behavior
+- Runtime execution orchestration
+- TransferableValue authority behavior
+- platform-agnostic architecture
+- generic adapter SDK abstractions
+
+No platform-neutral Coffer logic should be reimplemented here. This repository
+must consume substrate artifacts or included builds once the split-repository
+dependency wiring is finalized.

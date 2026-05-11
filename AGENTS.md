@@ -1,158 +1,132 @@
 # Coffer Minecraft — Agent Instructions
 
-This file defines repository-specific constraints for the coffer-minecraft platform.
+This file defines repository-specific constraints for `coffer-minecraft`.
 
-Global rules from ~/.codex/AGENTS.md apply.
-
----
+Global rules from `~/.codex/AGENTS.md` apply.
 
 ## Purpose
 
-This repository provides a Fabric platform implementation of the Coffer TransferableValue system.
+`coffer-minecraft` is the Minecraft super-platform repository.
 
-It owns:
-- Minecraft inventory-backed value semantics (bindings/inventory)
-- Fabric lifecycle, wiring, and execution surface (platforms/fabric)
+It exists for:
 
-It exposes a safe execution boundary for external adapters.
+- Minecraft-specific bindings
+- Minecraft-specific platform implementations
+- Minecraft-specific contracts and integration docs
+- Minecraft-specific tests and fixtures
 
----
+It does not exist for:
 
-## Core Architecture
+- Core substrate ownership
+- Runtime substrate ownership
+- TransferableValue authority ownership
+- platform-agnostic architecture work
+- generic adapter SDK design
 
-This repository is divided into:
+Authoritative substrate logic lives in separate repositories, including:
 
-- bindings/inventory
-  Owns inventory descriptors, matching, containers, and mutation behavior.
+- `coffer-core`
+- `coffer-runtime`
+- `coffer-transferable-value-authority`
 
-- platforms/fabric
-  Owns lifecycle, authority wiring, player resolution, threading, and execution surface.
+## Repository Shape
 
-- adapters (external, NOT in this repo)
-  Consume the platform via the public service interface.
+The intended top-level structure is:
 
----
+- `bindings/inventory`
+- `platforms/fabric`
+- `docs/architecture`
+- `docs/contracts`
+- `docs/integration`
+- `docs/journals`
 
-## Authority Boundaries
+Optional future directories must be justified by concrete Minecraft-specific
+need, not speculative platform planning.
 
-- TransferableValueAuthority implementations exist ONLY in bindings/inventory.
-- platforms/fabric MUST NOT reimplement inventory or value semantics.
-- External adapters MUST NOT implement authorities.
+## Ownership Boundaries
 
----
+`bindings/inventory` owns Minecraft inventory binding semantics only:
 
-## Execution Boundary
+- descriptor mapping
+- item matching
+- slot and container interpretation
+- simulation and mutation behavior at the Minecraft boundary
 
-All exchange execution flows through:
-
-CofferMinecraftExchangeService.submitExchange(...)
-
-This is the ONLY supported entry point for external consumers.
-
----
-
-## Threading Rules
-
-- All execution must occur on the Minecraft server thread.
-- platforms/fabric owns scheduling.
-- Off-thread execution must be scheduled or rejected.
-- No direct inventory mutation may occur off-thread.
-
----
-
-## Result Semantics
-
-FabricCofferExecutionResult defines the execution boundary:
-
-- Denied → Core refusal (no runtime execution)
-- Executed → Runtime attempted execution
-- Unavailable → Platform could not safely attempt execution
-
-Critical rule:
-
-Non-success MUST NOT be interpreted as “no mutation occurred”.
-
-Inventory may have partially changed due to post-simulation drift.
-
----
-
-## Platform Responsibilities
-
-platforms/fabric is responsible for:
+`platforms/fabric` owns Fabric-specific platform work only:
 
 - Fabric lifecycle integration
-- Authority construction and wiring
-- Player inventory resolution
-- Server-thread scheduling
-- Exposing the adapter-facing execution service
+- server attachment and scheduling
+- Fabric-facing execution surface
+- player and inventory resolution through Fabric/Minecraft APIs
 
-platforms/fabric MUST NOT:
+`docs/contracts` is for Minecraft-specific contracts only.
 
-- implement gameplay logic
-- define player interaction behavior
-- introduce adapter-specific assumptions
+`docs/integration` is for integration guidance between this repository and the
+substrate repositories.
 
----
+`adapters/` is deferred. If present, it remains documentation-only until a
+concrete Minecraft-specific adapter is explicitly requested.
 
-## Binding Responsibilities
+## Hard Prohibitions
 
-bindings/inventory is responsible for:
+Do not place the following in this repository:
 
-- Descriptor parsing and validation
-- Item and NBT matching
-- Container mutation behavior
-- Simulation and guarded application
+- Core arbitration logic
+- Runtime orchestration logic
+- TransferableValue authority behavior that belongs in the substrate authority repo
+- generic adapter SDK or framework layers
+- platform-agnostic architecture or contracts
+- gameplay policy, commands, UI, messaging, or permissions unless explicitly
+  requested as Minecraft-specific adapter work
 
-bindings/inventory MUST NOT:
+Do not duplicate substrate models, identifiers, planning logic, or authority
+behavior locally for convenience.
 
-- depend on Fabric lifecycle
-- perform scheduling
-- expose platform-specific behavior
+## Re-Foundation Rules
 
----
+During the repository re-foundation period:
 
-## Adapter Relationship
+- Keep scaffolding lightweight and non-speculative.
+- Preserve existing inventory and Fabric source as migration/reference material
+  until dependency wiring and boundaries are re-established.
+- Prefer documenting boundaries over adding new abstractions.
+- Do not begin new Fabric implementation unless explicitly requested.
+- Do not port historical adapter logic unless explicitly requested.
+- Do not delete implementation source solely because it is old; delete only what
+  is clearly generated, stale, or superseded by an approved boundary decision.
 
-Adapters are external consumers.
+Historical discovery-era journals and source are reference material, not current
+architectural authority.
 
-This repository MUST:
+## Dependency Discipline
 
-- expose a minimal, stable execution surface
-- avoid leaking internal implementation details
-- avoid expanding API surface prematurely
+This repository consumes substrate repositories. It does not redefine them.
 
-This repository MUST NOT:
+Use substrate dependencies for:
 
-- implement player-trade logic
-- define UI or commands
-- define messaging behavior
+- exchange request and outcome models
+- mutation and execution models
+- authority contracts and implementations
+- runtime orchestration
 
----
+Do not invent local replacements for missing dependency wiring. If a dependency
+is unsettled, document the boundary and defer implementation.
 
-## Known Constraints
+## Documentation Discipline
 
-- No rollback or retry exists.
-- Partial mutation is possible under drift conditions.
-- Result diagnostics are intentionally minimal.
-- Service discovery is Fabric-entrypoint-based.
-- Test tooling in bindings includes access widener and -Xverify:none.
+Use documentation intentionally:
 
----
+- `README.md`: repository purpose, structure, and current non-goals
+- `docs/architecture`: repository-scoped architecture and boundary decisions
+- `docs/contracts`: Minecraft-specific service and binding contracts
+- `docs/integration`: substrate integration and migration guidance
+- `docs/journals`: chronological records of behavior or boundary changes
 
-## Development Discipline
+Do not mix platform-agnostic substrate design into repository-local docs.
 
-- Maintain strict separation between binding, platform, and adapter concerns.
-- Do not introduce cross-layer shortcuts.
-- Do not duplicate logic across modules.
-- Do not expand public API without clear adapter need.
+## Journal Requirement
 
----
+Create a journal entry before any meaningful commit that changes behavior,
+repository structure, ownership boundaries, or integration expectations.
 
-## Outcome
-
-This repository must remain:
-
-- platform-agnostic at the Core level
-- platform-specific only at the Fabric layer
-- authoritative for inventory-backed value exchange
-- safe and predictable for external adapter consumption
+Journal entries must stay narrow, factual, and auditable.
