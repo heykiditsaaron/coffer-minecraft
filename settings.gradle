@@ -11,6 +11,7 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
+        mavenLocal()
         maven {
             name = 'Fabric'
             url = 'https://maven.fabricmc.net/'
@@ -19,13 +20,7 @@ dependencyResolutionManagement {
     }
 }
 
+rootProject.name = 'coffer-minecraft'
+
 include 'bindings:inventory'
 include 'platforms:fabric'
-
-includeBuild('../coffer') {
-    dependencySubstitution {
-        substitute module('dev.coffer:coffer-core') using project(':coffer-core')
-        substitute module('dev.coffer:coffer-runtime') using project(':coffer-runtime')
-        substitute module('dev.coffer:coffer-transferable-value-authority') using project(':first-party:authorities:transferable-value')
-    }
-}

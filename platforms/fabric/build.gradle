@@ -8,9 +8,9 @@ dependencies {
     mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
 
     implementation project(path: ':bindings:inventory', configuration: 'namedElements')
-    implementation 'dev.coffer:coffer-core:1.0.0'
-    implementation 'dev.coffer:coffer-runtime:1.0.0'
-    implementation 'dev.coffer:coffer-transferable-value-authority:1.0.0'
+    implementation "${coffer_group}:coffer-core:${coffer_version}"
+    implementation "${coffer_group}:coffer-runtime:${coffer_version}"
+    implementation "${coffer_group}:coffer-transferable-value-authority:${coffer_version}"
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
     compileOnly "net.fabricmc:fabric-loader:${fabric_loader_version}"
