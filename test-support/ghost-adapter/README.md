@@ -43,6 +43,7 @@ The ghost adapter may pressure-test:
 - Core denial vs approval boundaries
 - Runtime success, failure, and unknown projection categories
 - where future accountability projection could attach
+- minimal SER/CER-shaped JSONL-friendly accountability projection
 
 ## What Remains Deferred
 
