@@ -85,6 +85,75 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         assertEquals(Path.of("/tmp/platform-logs/coffer/ghost.jsonl"), target);
     }
 
+    @Test
+    void mixedInteractionStreamRemainsChronologicallyReconstructable() throws IOException {
+        Path target = GhostAdapterAccountabilityJsonlEmitter.cofferLogPath(tempDir.resolve("logs"), "ghost.jsonl");
+
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-10", ProjectionKind.CORE_DENIED, "minecraft.value.not_removable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-11", ProjectionKind.RUNTIME_SUCCESS, null));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-12", ProjectionKind.RUNTIME_UNKNOWN, "MALFORMED_RUNTIME_DESCRIPTOR"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                GhostAdapterAccountabilityProjection.toJsonlRecords(
+                        "interaction-13",
+                        constructionRefusedProjection()));
+
+        List<String> lines = Files.readAllLines(target);
+
+        assertEquals(7, lines.size());
+        assertIterableEquals(
+                List.of(
+                        "interaction-10",
+                        "interaction-10",
+                        "interaction-11",
+                        "interaction-11",
+                        "interaction-12",
+                        "interaction-12",
+                        "interaction-13"),
+                lines.stream().map(GhostAdapterAccountabilityJsonlEmitterTest::extractInteractionId).toList());
+        assertIterableEquals(
+                List.of(
+                        "captured",
+                        "core_denied",
+                        "captured",
+                        "runtime_succeeded",
+                        "captured",
+                        "runtime_unknown",
+                        "construction_refused"),
+                lines.stream().map(GhostAdapterAccountabilityJsonlEmitterTest::extractStage).toList());
+    }
+
+    @Test
+    void repeatedAppendPressurePreservesLineageCoherenceWithoutNestedTimelines() throws IOException {
+        Path target = GhostAdapterAccountabilityJsonlEmitter.cofferLogPath(tempDir.resolve("logs"), "ghost.jsonl");
+
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-20", ProjectionKind.RUNTIME_FAILURE, "minecraft.value.not_removable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-21", ProjectionKind.RUNTIME_UNKNOWN, "minecraft.container.unavailable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-22", ProjectionKind.RUNTIME_SUCCESS, null));
+
+        List<String> lines = Files.readAllLines(target);
+
+        assertEquals(6, lines.size());
+        assertLineage(lines, 0, "interaction-20", "captured", "runtime_failed");
+        assertLineage(lines, 2, "interaction-21", "captured", "runtime_unknown");
+        assertLineage(lines, 4, "interaction-22", "captured", "runtime_succeeded");
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"timeline\":")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"events\":")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"history\":")));
+    }
+
     private static List<Map<String, Object>> records(
             String interactionId,
             ProjectionKind kind,
@@ -98,10 +167,40 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         return new GhostAdapterProjection(kind, reasonCode, null, null, null);
     }
 
+    private static GhostAdapterProjection constructionRefusedProjection() {
+        return new GhostAdapterProjection(
+                ProjectionKind.CONSTRUCTION_REFUSED,
+                null,
+                new org.coffer.firstparty.authority.transferablevalue.construction.TransferableValueConstructionRefusal(
+                        org.coffer.firstparty.authority.transferablevalue.construction.TransferableValueConstructionRefusalReason.MISSING_BINDING_ID,
+                        new org.coffer.core.model.support.OpaqueObject(Map.of())),
+                null,
+                null);
+    }
+
     private static String extractInteractionId(String line) {
         String prefix = "\"interactionId\":\"";
         int start = line.indexOf(prefix) + prefix.length();
         int end = line.indexOf('"', start);
         return line.substring(start, end);
+    }
+
+    private static String extractStage(String line) {
+        String prefix = "\"stage\":\"";
+        int start = line.indexOf(prefix) + prefix.length();
+        int end = line.indexOf('"', start);
+        return line.substring(start, end);
+    }
+
+    private static void assertLineage(
+            List<String> lines,
+            int startIndex,
+            String interactionId,
+            String firstStage,
+            String secondStage) {
+        assertEquals(interactionId, extractInteractionId(lines.get(startIndex)));
+        assertEquals(interactionId, extractInteractionId(lines.get(startIndex + 1)));
+        assertEquals(firstStage, extractStage(lines.get(startIndex)));
+        assertEquals(secondStage, extractStage(lines.get(startIndex + 1)));
     }
 }
