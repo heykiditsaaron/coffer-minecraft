@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
 import net.minecraft.item.ItemStack;
@@ -190,8 +191,45 @@ class MinecraftTransferableValueEndToEndTest {
         assertTrue(secondSlots.get(1).isEmpty());
     }
 
+    @Test
+    void actorDisappearanceDuringRuntimeExecutionReportsUnknownWithoutMutation() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 5), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 7), ItemStack.EMPTY);
+        AtomicBoolean runtimePhase = new AtomicBoolean(false);
+        Harness harness = harness(firstSlots, secondSlots, (playerId, region) -> {
+            if (FIRST_PLAYER_ID.equals(playerId)) {
+                return Optional.of(firstSlots);
+            }
+            if (SECOND_PLAYER_ID.equals(playerId)) {
+                if (runtimePhase.get()) {
+                    return Optional.empty();
+                }
+                return Optional.of(secondSlots);
+            }
+            return Optional.empty();
+        });
+
+        ArbitrationResult arbitration = arbitrate(harness, 5, 7);
+        runtimePhase.set(true);
+
+        ExecutionResult execution = execute(harness, arbitration);
+
+        assertEquals(Decision.APPROVED, arbitration.outcome().decision());
+        assertNotNull(arbitration.mutationPlan());
+        assertEquals(MutationExecutionStatus.MUTATION_UNKNOWN, execution.mutationResults().get(0).status());
+        assertEquals(
+                MinecraftPlayerInventoryContainer.CONTAINER_UNAVAILABLE,
+                execution.mutationResults().get(0).detail().values().get("reasonCode"));
+        assertEquals(Items.STONE, firstSlots.get(0).getItem());
+        assertEquals(5, firstSlots.get(0).getCount());
+        assertTrue(firstSlots.get(1).isEmpty());
+        assertEquals(Items.DIRT, secondSlots.get(0).getItem());
+        assertEquals(7, secondSlots.get(0).getCount());
+        assertTrue(secondSlots.get(1).isEmpty());
+    }
+
     private static Harness harness(List<ItemStack> firstSlots, List<ItemStack> secondSlots) {
-        MinecraftContainerResolver resolver = new MinecraftContainerResolver((playerId, region) -> {
+        return harness(firstSlots, secondSlots, (playerId, region) -> {
             if (FIRST_PLAYER_ID.equals(playerId)) {
                 return Optional.of(firstSlots);
             }
@@ -200,6 +238,13 @@ class MinecraftTransferableValueEndToEndTest {
             }
             return Optional.empty();
         });
+    }
+
+    private static Harness harness(
+            List<ItemStack> firstSlots,
+            List<ItemStack> secondSlots,
+            MinecraftContainerResolver.PlayerInventorySlots slots) {
+        MinecraftContainerResolver resolver = new MinecraftContainerResolver(slots);
         TransferableValueCoreAuthority coreAuthority = new TransferableValueCoreAuthority(
                 resolver,
                 new MinecraftDescriptorFactory(),
