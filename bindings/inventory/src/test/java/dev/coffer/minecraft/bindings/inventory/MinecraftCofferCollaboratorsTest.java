@@ -117,6 +117,32 @@ class MinecraftCofferCollaboratorsTest {
     }
 
     @Test
+    void malformedRuntimeDescriptorReturnsEmptyValueSet() {
+        MinecraftRuntimeValueSetResolver resolver = new MinecraftRuntimeValueSetResolver();
+        TransferableValueRuntimeValueEntry malformed = runtimeEntry("value-1", 2, Map.of(
+                MinecraftDescriptorFactory.NBT_PAYLOAD, "{custom:1b}"));
+
+        Optional<TransferableValueSet> valueSet =
+                resolver.resolve(List.of(malformed), "minecraft", Map.of(), null);
+
+        assertTrue(valueSet.isEmpty());
+    }
+
+    @Test
+    void malformedRuntimeEntryPreventsPartialValueSetSuccess() {
+        MinecraftRuntimeValueSetResolver resolver = new MinecraftRuntimeValueSetResolver();
+        TransferableValueRuntimeValueEntry valid = runtimeEntry("value-1", 2, Map.of(
+                MinecraftDescriptorFactory.ITEM_ID, "minecraft:stone"));
+        TransferableValueRuntimeValueEntry malformed = runtimeEntry("value-2", 1, Map.of(
+                MinecraftDescriptorFactory.ITEM_ID, " "));
+
+        Optional<TransferableValueSet> valueSet =
+                resolver.resolve(List.of(valid, malformed), "minecraft", Map.of(), null);
+
+        assertTrue(valueSet.isEmpty());
+    }
+
+    @Test
     void collaboratorsDoNotMutateOrInterpretBeyondBindingScope() {
         MinecraftDescriptorFactory descriptorFactory = new MinecraftDescriptorFactory();
         Optional<TransferableValueDescriptor> descriptor = descriptorFactory.create(value(Map.of(
@@ -152,6 +178,17 @@ class MinecraftCofferCollaboratorsTest {
         assertFalse(interpreter.interpret(
                         "minecraft",
                         Map.of(MinecraftRuntimePayloadFactory.BINDING_ID, "other"),
+                        null)
+                .isPresent());
+    }
+
+    @Test
+    void malformedRuntimePayloadBindingMaterialIsRejectedAsUnrecognizable() {
+        MinecraftRuntimePayloadInterpreter interpreter = new MinecraftRuntimePayloadInterpreter();
+
+        assertFalse(interpreter.interpret(
+                        "minecraft",
+                        Map.of(MinecraftRuntimePayloadFactory.BINDING_ID, 7),
                         null)
                 .isPresent());
     }

@@ -3,8 +3,11 @@ package dev.coffer.minecraft.bindings.inventory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +29,7 @@ import org.coffer.core.model.id.PayloadId;
 import org.coffer.core.model.id.ReasonId;
 import org.coffer.core.model.id.TruthRef;
 import org.coffer.core.model.id.ValueRef;
+import org.coffer.core.model.mutation.AuthorizedMutation;
 import org.coffer.core.model.outcome.Decision;
 import org.coffer.core.model.request.ActorDeclaration;
 import org.coffer.core.model.request.AuthorityRequirement;
@@ -42,14 +46,14 @@ import org.coffer.firstparty.authority.transferablevalue.runtime.TransferableVal
 import org.coffer.runtime.CofferRuntime;
 import org.coffer.runtime.model.execution.ExecutionResult;
 import org.coffer.runtime.model.execution.ExecutionStatus;
+import org.coffer.runtime.model.execution.MutationExecutionRequest;
+import org.coffer.runtime.model.execution.MutationExecutionResponse;
 import org.coffer.runtime.model.execution.MutationExecutionStatus;
 import org.coffer.runtime.model.id.ExecutionPlanId;
 import org.coffer.runtime.model.id.ExecutionResultId;
 import org.coffer.runtime.model.id.ExecutionStepId;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.fail;
 
 class MinecraftTransferableValueEndToEndTest {
     private static final UUID FIRST_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000101");
@@ -124,6 +128,66 @@ class MinecraftTransferableValueEndToEndTest {
                 execution.mutationResults().get(0).detail().values().get("reasonCode"));
         assertEquals(4, harness.firstSlots().get(0).getCount());
         assertEquals(7, harness.secondSlots().get(0).getCount());
+    }
+
+    @Test
+    void malformedRuntimePayloadReportsUnknownWithoutMutatingInventories() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 5), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 7), ItemStack.EMPTY);
+        Harness harness = harness(firstSlots, secondSlots);
+        ArbitrationResult arbitration = arbitrate(harness, 5, 7);
+
+        MutationExecutionResponse response = harness.runtimeAuthority().execute(malformedRequest(
+                arbitration,
+                descriptor -> {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> runtimePayload =
+                            new LinkedHashMap<>((Map<String, Object>) descriptor.get("runtimePayload"));
+                    runtimePayload.put(MinecraftRuntimePayloadFactory.BINDING_ID, 7);
+                    descriptor.put("runtimePayload", Map.copyOf(runtimePayload));
+                }));
+
+        assertEquals(MutationExecutionStatus.MUTATION_UNKNOWN, response.status());
+        assertEquals("MALFORMED_RUNTIME_DESCRIPTOR", response.detail().values().get("reasonCode"));
+        assertEquals(Items.STONE, firstSlots.get(0).getItem());
+        assertEquals(5, firstSlots.get(0).getCount());
+        assertTrue(firstSlots.get(1).isEmpty());
+        assertEquals(Items.DIRT, secondSlots.get(0).getItem());
+        assertEquals(7, secondSlots.get(0).getCount());
+        assertTrue(secondSlots.get(1).isEmpty());
+    }
+
+    @Test
+    void malformedRuntimeValueSetReportsUnknownWithoutMutatingInventories() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 5), ItemStack.EMPTY);
+        List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 7), ItemStack.EMPTY);
+        Harness harness = harness(firstSlots, secondSlots);
+        ArbitrationResult arbitration = arbitrate(harness, 5, 7);
+
+        MutationExecutionResponse response = harness.runtimeAuthority().execute(malformedRequest(
+                arbitration,
+                descriptor -> {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> firstValueSet =
+                            new ArrayList<>((List<Map<String, Object>>) descriptor.get("firstValueSet"));
+                    Map<String, Object> firstEntry = new LinkedHashMap<>(firstValueSet.get(0));
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> runtimeDescriptor =
+                            new LinkedHashMap<>((Map<String, Object>) firstEntry.get("runtimeDescriptor"));
+                    runtimeDescriptor.remove(MinecraftDescriptorFactory.ITEM_ID);
+                    firstEntry.put("runtimeDescriptor", Map.copyOf(runtimeDescriptor));
+                    firstValueSet.set(0, Map.copyOf(firstEntry));
+                    descriptor.put("firstValueSet", List.copyOf(firstValueSet));
+                }));
+
+        assertEquals(MutationExecutionStatus.MUTATION_UNKNOWN, response.status());
+        assertEquals("MALFORMED_RUNTIME_DESCRIPTOR", response.detail().values().get("reasonCode"));
+        assertEquals(Items.STONE, firstSlots.get(0).getItem());
+        assertEquals(5, firstSlots.get(0).getCount());
+        assertTrue(firstSlots.get(1).isEmpty());
+        assertEquals(Items.DIRT, secondSlots.get(0).getItem());
+        assertEquals(7, secondSlots.get(0).getCount());
+        assertTrue(secondSlots.get(1).isEmpty());
     }
 
     private static Harness harness(List<ItemStack> firstSlots, List<ItemStack> secondSlots) {
@@ -219,6 +283,20 @@ class MinecraftTransferableValueEndToEndTest {
             reasonIds.add(new ReasonId("reason-" + index));
         }
         return List.copyOf(reasonIds);
+    }
+
+    private static MutationExecutionRequest malformedRequest(
+            ArbitrationResult arbitration,
+            java.util.function.Consumer<Map<String, Object>> descriptorMutation) {
+        AuthorizedMutation mutation = arbitration.mutationPlan().mutations().get(0);
+        Map<String, Object> descriptor = new LinkedHashMap<>(mutation.descriptor().values());
+        descriptorMutation.accept(descriptor);
+        return new MutationExecutionRequest(
+                mutation.mutationRef(),
+                mutation.satisfies(),
+                mutation.authority(),
+                new OpaqueObject(Map.copyOf(descriptor)),
+                mutation.scope());
     }
 
     private record Harness(
