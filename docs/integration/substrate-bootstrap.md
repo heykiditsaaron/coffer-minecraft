@@ -67,3 +67,18 @@ present for compile or test work.
 That artifact publication and first compile verification remain separate follow-up
 steps.
 
+## Dependency Proof Status
+
+The first compile proof against the artifact-first bootstrap model established
+that this repository currently expects:
+
+- `dev.coffer:coffer-core:0.0.0-SNAPSHOT`
+- `dev.coffer:coffer-runtime:0.0.0-SNAPSHOT`
+- `dev.coffer:coffer-transferable-value-authority:0.0.0-SNAPSHOT`
+
+At the time of that proof attempt, `mavenLocal` contained only `1.0.0` artifacts
+for those substrate modules, not the expected `0.0.0-SNAPSHOT` coordinates.
+
+That means the current blocker is coordinate/version availability, not yet
+source-level API drift. Source compatibility cannot be evaluated until matching
+artifacts are published or the agreed bootstrap coordinates are updated.
