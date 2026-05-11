@@ -22,20 +22,21 @@ import org.coffer.core.model.id.MutationPlanId;
 import org.coffer.core.model.id.MutationRequirementRef;
 import org.coffer.core.model.id.OfferRef;
 import org.coffer.core.model.id.OutcomeId;
+import org.coffer.core.model.id.PayloadId;
 import org.coffer.core.model.id.ReasonId;
-import org.coffer.core.model.id.RequestId;
+import org.coffer.core.model.id.TruthRef;
 import org.coffer.core.model.id.ValueRef;
 import org.coffer.core.model.outcome.Decision;
 import org.coffer.core.model.request.ActorDeclaration;
 import org.coffer.core.model.request.AuthorityRequirement;
-import org.coffer.core.model.request.ExchangeRequest;
-import org.coffer.core.model.request.MutationRequirement;
-import org.coffer.core.model.request.Offer;
+import org.coffer.core.model.request.ExchangePayload;
 import org.coffer.core.model.request.ValueDeclaration;
-import org.coffer.core.model.support.AuthorityDefinedRequirement;
-import org.coffer.core.model.support.Metadata;
 import org.coffer.core.model.support.OpaqueObject;
-import org.coffer.core.model.support.ReferenceSet;
+import org.coffer.firstparty.authority.transferablevalue.construction.TransferableValueAtomicSwapConstruction;
+import org.coffer.firstparty.authority.transferablevalue.construction.TransferableValueAtomicSwapRefs;
+import org.coffer.firstparty.authority.transferablevalue.construction.TransferableValueConstructionResult;
+import org.coffer.firstparty.authority.transferablevalue.construction.TransferableValueConstructionResult.Success;
+import org.coffer.firstparty.authority.transferablevalue.construction.TransferableValueExchangePayloadConstruction;
 import org.coffer.firstparty.authority.transferablevalue.core.TransferableValueCoreAuthority;
 import org.coffer.firstparty.authority.transferablevalue.runtime.TransferableValueRuntimeAuthority;
 import org.coffer.runtime.CofferRuntime;
@@ -47,6 +48,8 @@ import org.coffer.runtime.model.id.ExecutionResultId;
 import org.coffer.runtime.model.id.ExecutionStepId;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 class MinecraftTransferableValueEndToEndTest {
     private static final UUID FIRST_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000101");
@@ -147,12 +150,11 @@ class MinecraftTransferableValueEndToEndTest {
 
     private static ArbitrationResult arbitrate(Harness harness, long firstQuantity, long secondQuantity) {
         return CofferCore.arbitrate(
-                exchangeRequest(firstQuantity, secondQuantity),
+                exchangePayload(firstQuantity, secondQuantity),
                 ignored -> new ResolutionResult.Resolved(harness.coreAuthority()),
                 new OutcomeId("outcome-1"),
                 new MutationPlanId("mutation-plan-1"),
-                List.of(new ReasonId("reason-1")),
-                metadata());
+                denialReasonIds());
     }
 
     private static ExecutionResult execute(Harness harness, ArbitrationResult arbitration) {
@@ -161,41 +163,34 @@ class MinecraftTransferableValueEndToEndTest {
                 new ExecutionResultId("execution-result-1"),
                 arbitration.mutationPlan(),
                 List.of(new ExecutionStepId("execution-step-1")),
-                List.of(harness.runtimeAuthority()),
-                metadata());
+                List.of(harness.runtimeAuthority()));
     }
 
-    private static ExchangeRequest exchangeRequest(long firstQuantity, long secondQuantity) {
-        return new ExchangeRequest(
-                new RequestId("request-1"),
-                List.of(actorDeclaration(FIRST_ACTOR), actorDeclaration(SECOND_ACTOR)),
-                List.of(
-                        new Offer(
+    private static ExchangePayload exchangePayload(long firstQuantity, long secondQuantity) {
+        TransferableValueConstructionResult construction =
+                TransferableValueExchangePayloadConstruction.constructAtomicSwap(
+                        new TransferableValueAtomicSwapConstruction(
+                                new TransferableValueAtomicSwapRefs(
+                                        new PayloadId("payload-1"),
+                                        Map.of(FIRST_VALUE, new TruthRef("truth-1")),
+                                        Map.of(SECOND_VALUE, new TruthRef("truth-2")),
+                                        new TruthRef("truth-3"),
+                                        new TruthRef("truth-4"),
+                                        new MutationRequirementRef("mutation-requirement-1")),
+                                actorDeclaration(FIRST_ACTOR),
+                                actorDeclaration(SECOND_ACTOR),
                                 new OfferRef("offer-1"),
-                                FIRST_ACTOR,
-                                List.of(valueDeclaration(FIRST_VALUE, "minecraft:stone", firstQuantity))),
-                        new Offer(
                                 new OfferRef("offer-2"),
-                                SECOND_ACTOR,
-                                List.of(valueDeclaration(SECOND_VALUE, "minecraft:dirt", secondQuantity)))),
-                List.of(new AuthorityRequirement(TransferableValueCoreAuthority.AUTHORITY_ID, List.of())),
-                List.of(atomicSwapRequirement()),
-                metadata());
-    }
-
-    private static MutationRequirement atomicSwapRequirement() {
-        return new MutationRequirement(
-                new MutationRequirementRef("mutation-requirement-1"),
-                TransferableValueCoreAuthority.AUTHORITY_ID,
-                new ReferenceSet(Set.of(FIRST_ACTOR, SECOND_ACTOR), Set.of(FIRST_VALUE, SECOND_VALUE)),
-                new AuthorityDefinedRequirement(Map.of(
-                        "schemaVersion", TransferableValueCoreAuthority.SCHEMA_VERSION,
-                        "type", TransferableValueCoreAuthority.ATOMIC_SWAP,
-                        "bindingId", "minecraft-inventory",
-                        "firstActorRef", FIRST_ACTOR.value(),
-                        "secondActorRef", SECOND_ACTOR.value(),
-                        "firstValueRefs", List.of(FIRST_VALUE.value()),
-                        "secondValueRefs", List.of(SECOND_VALUE.value()))));
+                                List.of(valueDeclaration(FIRST_VALUE, "minecraft:stone", firstQuantity)),
+                                List.of(valueDeclaration(SECOND_VALUE, "minecraft:dirt", secondQuantity)),
+                                "minecraft-inventory"));
+        if (construction instanceof Success success) {
+            return success.payload();
+        }
+        TransferableValueConstructionResult.Refused refused =
+                (TransferableValueConstructionResult.Refused) construction;
+        fail("Atomic swap construction refused: " + refused.refusal());
+        throw new IllegalStateException("unreachable");
     }
 
     private static ActorDeclaration actorDeclaration(ActorRef actorRef) {
@@ -218,8 +213,12 @@ class MinecraftTransferableValueEndToEndTest {
         return new ArrayList<>(List.of(slots));
     }
 
-    private static Metadata metadata() {
-        return new Metadata(Map.of());
+    private static List<ReasonId> denialReasonIds() {
+        List<ReasonId> reasonIds = new ArrayList<>();
+        for (int index = 0; index < 8; index++) {
+            reasonIds.add(new ReasonId("reason-" + index));
+        }
+        return List.copyOf(reasonIds);
     }
 
     private record Harness(

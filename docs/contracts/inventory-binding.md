@@ -125,17 +125,16 @@ materials and the substrate TransferableValue ports. The substrate remains
 authoritative for planning, arbitration, execution sequencing, and normal TVAL
 payload construction.
 
-The intended atomic-swap path for this repository is the substrate TVAL
-construction surface:
+The atomic-swap path for this repository is the substrate TVAL construction
+surface:
 
 - use
-  `TransferableValueExchangePayloadConstruction.constructAtomicSwap(...)` when
-  the consumed substrate artifact exposes that surface
+  `TransferableValueExchangePayloadConstruction.constructAtomicSwap(...)` for
+  Minecraft TVAL payload construction
 - do not treat hand-authored TVAL truth requirements, mutation requirements, or
-  authority-owned requirement bodies as the long-term coffer-minecraft path
-- keep any unavoidable sharp-path construction isolated and explicitly
-  documented until dependency wiring catches up with the authoritative
-  substrate surface
+  authority-owned requirement bodies as the coffer-minecraft path
+- keep any future sharp-path fallback isolated and explicitly documented if the
+  published substrate construction surface proves insufficient for a proof goal
 
 ## Binding-Id Direction
 

@@ -29,7 +29,7 @@ import org.coffer.core.model.id.OutcomeId;
 import org.coffer.core.model.id.ReasonId;
 import org.coffer.core.model.mutation.MutationPlan;
 import org.coffer.core.model.outcome.Decision;
-import org.coffer.core.model.request.ExchangeRequest;
+import org.coffer.core.model.request.ExchangePayload;
 import org.coffer.core.model.support.OpaqueObject;
 import org.coffer.firstparty.authority.transferablevalue.core.TransferableValueCoreAuthority;
 import org.coffer.firstparty.authority.transferablevalue.runtime.TransferableValueRuntimeAuthority;
@@ -110,92 +110,90 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
     }
 
     @Override
-    public CompletableFuture<FabricCofferExecutionResult> submitExchange(ExchangeRequest request) {
+    public CompletableFuture<FabricCofferExecutionResult> submitExchange(ExchangePayload request) {
         Objects.requireNonNull(request, "request");
-        LOGGER.info("Fabric called; requestId={}", request.requestId().value());
+        LOGGER.info("Fabric called; payloadId={}", request.payloadId().value());
         return enqueueExchange(request);
     }
 
-    FabricCofferExecutionResult executeExchange(ExchangeRequest exchangeRequest) {
-        Objects.requireNonNull(exchangeRequest, "exchangeRequest");
+    FabricCofferExecutionResult executeExchange(ExchangePayload exchangePayload) {
+        Objects.requireNonNull(exchangePayload, "exchangePayload");
         requireServerThread();
 
-        String requestId = exchangeRequest.requestId().value();
-        LOGGER.info("Fabric exchange execution entered; requestId={}", requestId);
-        MutationPlanId mutationPlanId = new MutationPlanId(requestId + ":fabric-mutation-plan");
-        LOGGER.info("Fabric arbitration starting; requestId={}", requestId);
+        String payloadId = exchangePayload.payloadId().value();
+        LOGGER.info("Fabric exchange execution entered; payloadId={}", payloadId);
+        MutationPlanId mutationPlanId = new MutationPlanId(payloadId + ":fabric-mutation-plan");
+        LOGGER.info("Fabric arbitration starting; payloadId={}", payloadId);
         ArbitrationResult arbitration = CofferCore.arbitrate(
-                exchangeRequest,
+                exchangePayload,
                 coreAuthorityResolver,
-                new OutcomeId(requestId + ":fabric-outcome"),
+                new OutcomeId(payloadId + ":fabric-outcome"),
                 mutationPlanId,
-                denialReasonIds(requestId),
-                exchangeRequest.metadata());
+                denialReasonIds(payloadId));
         LOGGER.info(
-                "Fabric arbitration completed; requestId={}, decision={}, hasMutationPlan={}",
-                requestId,
+                "Fabric arbitration completed; payloadId={}, decision={}, hasMutationPlan={}",
+                payloadId,
                 arbitration.outcome().decision(),
                 arbitration.mutationPlan() != null);
 
         if (arbitration.outcome().decision() == Decision.DENIED) {
-            LOGGER.info("Fabric arbitration denied exchange; requestId={}", requestId);
+            LOGGER.info("Fabric arbitration denied exchange; payloadId={}", payloadId);
             return new FabricCofferExecutionResult.Denied(arbitration.outcome());
         }
 
         MutationPlan mutationPlan = arbitration.mutationPlan();
         if (mutationPlan == null) {
             LOGGER.error(
-                    "Fabric arbitration approved exchange without mutation plan; requestId={}, reasonCode=APPROVED_WITHOUT_MUTATION_PLAN",
-                    requestId);
+                    "Fabric arbitration approved exchange without mutation plan; payloadId={}, reasonCode=APPROVED_WITHOUT_MUTATION_PLAN",
+                    payloadId);
             return platformUnavailable("APPROVED_WITHOUT_MUTATION_PLAN");
         }
 
         LOGGER.info(
-                "Fabric arbitration approved exchange; requestId={}, mutationCount={}",
-                requestId,
+                "Fabric arbitration approved exchange; payloadId={}, mutationCount={}",
+                payloadId,
                 mutationPlan.mutations().size());
-        LOGGER.info("Fabric runtime execution starting; requestId={}", requestId);
+        LOGGER.info("Fabric runtime execution starting; payloadId={}", payloadId);
         FabricCofferExecutionResult.Executed executed = new FabricCofferExecutionResult.Executed(cofferRuntime.execute(
-                new ExecutionPlanId(requestId + ":fabric-execution-plan"),
-                new ExecutionResultId(requestId + ":fabric-execution-result"),
+                new ExecutionPlanId(payloadId + ":fabric-execution-plan"),
+                new ExecutionResultId(payloadId + ":fabric-execution-result"),
                 mutationPlan,
-                executionStepIds(requestId, mutationPlan.mutations().size()),
-                runtimeAuthorities,
-                exchangeRequest.metadata()));
+                executionStepIds(payloadId, mutationPlan.mutations().size()),
+                runtimeAuthorities));
         LOGGER.info(
-                "Fabric runtime execution completed; requestId={}, status={}",
-                requestId,
+                "Fabric runtime execution completed; payloadId={}, status={}",
+                payloadId,
                 executed.result().status());
         return executed;
     }
 
-    CompletableFuture<FabricCofferExecutionResult> enqueueExchange(ExchangeRequest exchangeRequest) {
-        Objects.requireNonNull(exchangeRequest, "exchangeRequest");
-        String requestId = exchangeRequest.requestId().value();
-        LOGGER.info("Fabric exchange enqueue entered; requestId={}", requestId);
+    CompletableFuture<FabricCofferExecutionResult> enqueueExchange(ExchangePayload exchangePayload) {
+        Objects.requireNonNull(exchangePayload, "exchangePayload");
+        String payloadId = exchangePayload.payloadId().value();
+        LOGGER.info("Fabric exchange enqueue entered; payloadId={}", payloadId);
 
         MinecraftServer currentServer = server;
         LOGGER.info(
-                "Fabric exchange enqueue server snapshot resolved; requestId={}, hasServer={}, callerThread={}",
-                requestId,
+                "Fabric exchange enqueue server snapshot resolved; payloadId={}, hasServer={}, callerThread={}",
+                payloadId,
                 currentServer != null,
                 Thread.currentThread().getName());
         if (currentServer == null) {
-            LOGGER.warn("Fabric exchange enqueue unavailable; requestId={}, reasonCode=SERVER_UNAVAILABLE", requestId);
+            LOGGER.warn("Fabric exchange enqueue unavailable; payloadId={}, reasonCode=SERVER_UNAVAILABLE", payloadId);
             return CompletableFuture.completedFuture(platformUnavailable("SERVER_UNAVAILABLE"));
         }
 
         CompletableFuture<FabricCofferExecutionResult> result = new CompletableFuture<>();
-        PendingExchange pendingExchange = new PendingExchange(exchangeRequest, result);
+        PendingExchange pendingExchange = new PendingExchange(exchangePayload, result);
         pendingExchanges.add(pendingExchange);
         if (server != currentServer && pendingExchanges.remove(pendingExchange)) {
-            LOGGER.warn("Fabric exchange enqueue unavailable after server detach; requestId={}, reasonCode=SERVER_DETACHED", requestId);
+            LOGGER.warn("Fabric exchange enqueue unavailable after server detach; payloadId={}, reasonCode=SERVER_DETACHED", payloadId);
             result.complete(platformUnavailable("SERVER_DETACHED"));
             return result;
         }
         LOGGER.info(
-                "Fabric exchange enqueued for server tick; requestId={}, serverHash={}",
-                requestId,
+                "Fabric exchange enqueued for server tick; payloadId={}, serverHash={}",
+                payloadId,
                 System.identityHashCode(currentServer));
         return result;
     }
@@ -210,17 +208,17 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
     }
 
     private void completeExchange(
-            ExchangeRequest exchangeRequest,
+            ExchangePayload exchangePayload,
             MinecraftServer tickServer,
             CompletableFuture<FabricCofferExecutionResult> result) {
-        String requestId = exchangeRequest.requestId().value();
+        String payloadId = exchangePayload.payloadId().value();
         LOGGER.info(
-                "Fabric queued exchange task entered; requestId={}, taskThread={}, serverStillAttached={}",
-                requestId,
+                "Fabric queued exchange task entered; payloadId={}, taskThread={}, serverStillAttached={}",
+                payloadId,
                 Thread.currentThread().getName(),
                 server == tickServer);
         if (server != tickServer) {
-            LOGGER.warn("Fabric queued exchange unavailable during task; requestId={}, reasonCode=SERVER_UNAVAILABLE", requestId);
+            LOGGER.warn("Fabric queued exchange unavailable during task; payloadId={}, reasonCode=SERVER_UNAVAILABLE", payloadId);
             result.complete(platformUnavailable("SERVER_UNAVAILABLE"));
             return;
         }
@@ -228,14 +226,14 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
         boolean previousDraining = drainingExchangeQueue.get();
         drainingExchangeQueue.set(Boolean.TRUE);
         try {
-            FabricCofferExecutionResult executionResult = executeExchange(exchangeRequest);
+            FabricCofferExecutionResult executionResult = executeExchange(exchangePayload);
             LOGGER.info(
-                    "Fabric queued exchange completing future; requestId={}, resultType={}",
-                    requestId,
+                    "Fabric queued exchange completing future; payloadId={}, resultType={}",
+                    payloadId,
                     executionResult.getClass().getSimpleName());
             result.complete(executionResult);
         } catch (Throwable throwable) {
-            LOGGER.error("Fabric queued exchange completing future exceptionally; requestId={}", requestId, throwable);
+            LOGGER.error("Fabric queued exchange completing future exceptionally; payloadId={}", payloadId, throwable);
             result.completeExceptionally(throwable);
         } finally {
             drainingExchangeQueue.set(previousDraining);
@@ -245,8 +243,8 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
     private void completePendingUnavailable(String reasonCode) {
         PendingExchange pendingExchange;
         while ((pendingExchange = pendingExchanges.poll()) != null) {
-            String requestId = pendingExchange.request().requestId().value();
-            LOGGER.warn("Fabric queued exchange unavailable during detach; requestId={}, reasonCode={}", requestId, reasonCode);
+            String payloadId = pendingExchange.request().payloadId().value();
+            LOGGER.warn("Fabric queued exchange unavailable during detach; payloadId={}, reasonCode={}", payloadId, reasonCode);
             pendingExchange.future().complete(platformUnavailable(reasonCode));
         }
     }
@@ -304,7 +302,7 @@ final class CofferMinecraftFabricService implements CofferMinecraftExchangeServi
     }
 
     private record PendingExchange(
-            ExchangeRequest request,
+            ExchangePayload request,
             CompletableFuture<FabricCofferExecutionResult> future) {
     }
 }

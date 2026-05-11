@@ -83,7 +83,7 @@ That means the current blocker is coordinate/version availability, not yet
 source-level API drift. Source compatibility cannot be evaluated until matching
 artifacts are published or the agreed bootstrap coordinates are updated.
 
-The bootstrap version has now been aligned to the currently available local
+The bootstrap version was aligned to the then-currently available local
 artifacts:
 
 - `dev.coffer:coffer-core:1.0.0`
@@ -108,3 +108,17 @@ With those metadata alignments in place, the repository successfully reached:
 That proves dependency resolution is working against the current local split
 substrate artifacts and that the current inventory binding and Fabric source
 compile against them at the current bootstrap boundary.
+
+The current local bootstrap target is now:
+
+- `dev.coffer:coffer-core:1.0.1`
+- `dev.coffer:coffer-runtime:1.0.1`
+- `dev.coffer:coffer-transferable-value-authority:1.0.1`
+
+Those exact coordinates are expected to resolve from `mavenLocal`.
+
+The `1.0.1` TVAL authority artifact also exposes the public construction
+package needed for coffer-minecraft to consume
+`TransferableValueExchangePayloadConstruction.constructAtomicSwap(...)`
+directly, removing the earlier need to preserve a sharp-path Minecraft proof
+solely because that construction surface was unpublished.
