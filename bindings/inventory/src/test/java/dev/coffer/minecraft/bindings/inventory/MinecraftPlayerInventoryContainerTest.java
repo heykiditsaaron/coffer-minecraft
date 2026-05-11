@@ -95,6 +95,16 @@ class MinecraftPlayerInventoryContainerTest {
     }
 
     @Test
+    void unresolvedContainerReturnsUnknownForRemoval() {
+        MinecraftPlayerInventoryContainer container = unavailableContainer();
+
+        RemovabilityResult result = container.canRemove(values(descriptor("minecraft:stone", 1)));
+
+        RemovabilityResult.Unknown unknown = assertInstanceOf(RemovabilityResult.Unknown.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.CONTAINER_UNAVAILABLE, unknown.reasonCode());
+    }
+
+    @Test
     void canRemoveDoesNotMutateInventory() throws CommandSyntaxException {
         ItemStack first = new ItemStack(Items.STONE, 3);
         ItemStack second = stackWithNbt(Items.STONE, 4, "{custom:1b}");
@@ -183,6 +193,16 @@ class MinecraftPlayerInventoryContainerTest {
         assertEquals(60, first.getCount());
         assertEquals(10, second.getCount());
         assertEquals(secondNbtBefore, second.getNbt().toString());
+    }
+
+    @Test
+    void unresolvedContainerReturnsUnknownForReceivability() {
+        MinecraftPlayerInventoryContainer container = unavailableContainer();
+
+        ReceivabilityResult result = container.canReceive(values(descriptor("minecraft:stone", 1)));
+
+        ReceivabilityResult.Unknown unknown = assertInstanceOf(ReceivabilityResult.Unknown.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.CONTAINER_UNAVAILABLE, unknown.reasonCode());
     }
 
     @Test
@@ -332,6 +352,21 @@ class MinecraftPlayerInventoryContainerTest {
 
         SimulationResult.Failed failed = assertInstanceOf(SimulationResult.Failed.class, failedResult);
         assertEquals(MinecraftPlayerInventoryContainer.VALUE_NOT_RECEIVABLE, failed.reasonCode());
+    }
+
+    @Test
+    void simulationReturnsUnknownWhenContainerCannotBeResolved() {
+        MinecraftPlayerInventoryContainer available =
+                container(List.of(new ItemStack(Items.STONE, 5), ItemStack.EMPTY));
+        MinecraftPlayerInventoryContainer unavailable = unavailableContainer();
+
+        SimulationResult result = available.simulateAtomicSwap(
+                unavailable,
+                values(descriptor("minecraft:stone", 1)),
+                values(descriptor("minecraft:dirt", 1)));
+
+        SimulationResult.Unknown unknown = assertInstanceOf(SimulationResult.Unknown.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.CONTAINER_UNAVAILABLE, unknown.reasonCode());
     }
 
     @Test
@@ -492,6 +527,23 @@ class MinecraftPlayerInventoryContainerTest {
     }
 
     @Test
+    void applicationReturnsUnknownWhenContainerCannotBeResolved() {
+        List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 5), ItemStack.EMPTY);
+        MinecraftPlayerInventoryContainer available = container(firstSlots);
+        MinecraftPlayerInventoryContainer unavailable = unavailableContainer();
+
+        MutationApplicationResult result = available.applyAtomicSwap(
+                unavailable,
+                values(descriptor("minecraft:stone", 1)),
+                values(descriptor("minecraft:dirt", 1)));
+
+        MutationApplicationResult.Unknown unknown = assertInstanceOf(MutationApplicationResult.Unknown.class, result);
+        assertEquals(MinecraftPlayerInventoryContainer.CONTAINER_UNAVAILABLE, unknown.reasonCode());
+        assertEquals(5, firstSlots.get(0).getCount());
+        assertEquals(0, firstSlots.get(1).getCount());
+    }
+
+    @Test
     void mutationRemainsInsideConfiguredSlotBoundaries() {
         List<ItemStack> firstSlots = mutableSlots(new ItemStack(Items.STONE, 2), ItemStack.EMPTY);
         List<ItemStack> secondSlots = mutableSlots(new ItemStack(Items.DIRT, 2), ItemStack.EMPTY);
@@ -513,6 +565,13 @@ class MinecraftPlayerInventoryContainerTest {
                 PLAYER_ID,
                 MinecraftPlayerInventoryContainer.Region.MAIN,
                 slots);
+    }
+
+    private static MinecraftPlayerInventoryContainer unavailableContainer() {
+        return new MinecraftPlayerInventoryContainer(
+                "player:" + PLAYER_ID + ":inventory:main",
+                MinecraftPlayerInventoryContainer.Region.MAIN,
+                Optional::empty);
     }
 
     private static List<ItemStack> mutableSlots(ItemStack... slots) {
