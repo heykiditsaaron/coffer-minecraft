@@ -8,5 +8,8 @@ Examples:
 - Minecraft inventory binding contracts
 - result semantics that are specific to this repository
 
-Do not place substrate contracts or platform-agnostic architecture here.
+Current contract documents include:
 
+- [inventory-binding.md](/home/aaron/dev/coffer-minecraft/docs/contracts/inventory-binding.md)
+
+Do not place substrate contracts or platform-agnostic architecture here.
