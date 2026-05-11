@@ -38,6 +38,10 @@ final class CofferMinecraftLifecycleAccountability {
         append(runDirectory, "CER", "fabric_core_denied", code);
     }
 
+    void recordCoreApproved(Path runDirectory) {
+        append(runDirectory, "CER", "fabric_core_approved", null);
+    }
+
     Path logPath(Path runDirectory) {
         Objects.requireNonNull(runDirectory, "runDirectory");
         return runDirectory.resolve("logs").resolve("coffer").resolve(FILE_NAME);
