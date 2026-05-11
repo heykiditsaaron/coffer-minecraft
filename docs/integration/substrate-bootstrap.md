@@ -7,7 +7,7 @@ This document records the intended early re-foundation dependency path between
 
 ## Default Local Workflow
 
-Default local development should use published snapshot artifacts from:
+Default local development should use published substrate artifacts from:
 
 - `coffer-core`
 - `coffer-runtime`
@@ -70,7 +70,7 @@ steps.
 ## Dependency Proof Status
 
 The first compile proof against the artifact-first bootstrap model established
-that this repository currently expects:
+that the repository had been configured to expect:
 
 - `dev.coffer:coffer-core:0.0.0-SNAPSHOT`
 - `dev.coffer:coffer-runtime:0.0.0-SNAPSHOT`
@@ -82,3 +82,29 @@ for those substrate modules, not the expected `0.0.0-SNAPSHOT` coordinates.
 That means the current blocker is coordinate/version availability, not yet
 source-level API drift. Source compatibility cannot be evaluated until matching
 artifacts are published or the agreed bootstrap coordinates are updated.
+
+The bootstrap version has now been aligned to the currently available local
+artifacts:
+
+- `dev.coffer:coffer-core:1.0.0`
+- `dev.coffer:coffer-runtime:1.0.0`
+- `dev.coffer:coffer-transferable-value-authority:1.0.0`
+
+This is the minimal non-behavioral alignment because those exact coordinates are
+already present in `mavenLocal`, and no monolithic or local-project-path
+assumptions are required to consume them.
+
+Compile proof also established one additional bootstrap rule: `mavenLocal` must
+be available to project-level dependency resolution alongside Loom-managed
+repositories. Relying on settings-level repositories alone is not sufficient for
+this build because Loom contributes required Minecraft and Mojang repositories at
+the project level.
+
+With those metadata alignments in place, the repository successfully reached:
+
+- `./gradlew :bindings:inventory:compileJava`
+- `./gradlew :platforms:fabric:compileJava`
+
+That proves dependency resolution is working against the current local split
+substrate artifacts and that the preserved source compiles against them at the
+current bootstrap boundary.
