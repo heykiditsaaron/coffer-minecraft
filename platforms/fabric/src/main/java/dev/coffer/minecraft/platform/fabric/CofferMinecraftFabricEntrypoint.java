@@ -13,6 +13,8 @@ public final class CofferMinecraftFabricEntrypoint implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger(CofferMinecraftFabricEntrypoint.class);
     private static final CofferMinecraftExchangeService UNINITIALIZED_SERVICE =
             new UninitializedExchangeService();
+    private static final CofferMinecraftLifecycleAccountability LIFECYCLE_ACCOUNTABILITY =
+            CofferMinecraftLifecycleAccountability.create();
     private static volatile CofferMinecraftFabricService service;
 
     public static CofferMinecraftExchangeService exchangeService() {
@@ -28,9 +30,27 @@ public final class CofferMinecraftFabricEntrypoint implements ModInitializer {
         CofferMinecraftFabricService initializedService = new CofferMinecraftFabricService();
         initializedService.initialize();
         service = initializedService;
-        ServerLifecycleEvents.SERVER_STARTED.register(initializedService::attachServer);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> initializedService.detachServer());
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            initializedService.attachServer(server);
+            emitLifecycleRecord(server.getRunDirectory().toPath(), true);
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            emitLifecycleRecord(server.getRunDirectory().toPath(), false);
+            initializedService.detachServer();
+        });
         ServerTickEvents.END_SERVER_TICK.register(initializedService::drainPendingExchanges);
+    }
+
+    private static void emitLifecycleRecord(java.nio.file.Path runDirectory, boolean started) {
+        try {
+            if (started) {
+                LIFECYCLE_ACCOUNTABILITY.recordServerStarted(runDirectory);
+            } else {
+                LIFECYCLE_ACCOUNTABILITY.recordServerStopped(runDirectory);
+            }
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Fabric lifecycle accountability emission failed; started={}", started, exception);
+        }
     }
 
     private static final class UninitializedExchangeService implements CofferMinecraftExchangeService {
