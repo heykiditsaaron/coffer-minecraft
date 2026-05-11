@@ -242,6 +242,79 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         assertTrue(lines.stream().noneMatch(line -> line.contains("\"runtime\":")));
     }
 
+    @Test
+    void rawLinesRemainLeftToRightReadableAcrossCurrentRecordTypes() throws IOException {
+        Path target = GhostAdapterAccountabilityJsonlEmitter.cofferLogPath(tempDir.resolve("logs"), "ghost.jsonl");
+
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                GhostAdapterAccountabilityProjection.toJsonlRecords("interaction-50", constructionRefusedProjection()));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-51", ProjectionKind.CORE_DENIED, "minecraft.value.not_removable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-52", ProjectionKind.RUNTIME_SUCCESS, null));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-53", ProjectionKind.RUNTIME_FAILURE, "minecraft.value.not_removable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-54", ProjectionKind.RUNTIME_UNKNOWN, "MALFORMED_RUNTIME_DESCRIPTOR"));
+
+        List<String> lines = Files.readAllLines(target);
+
+        assertIterableEquals(
+                List.of(
+                        "{\"interactionId\":\"interaction-50\",\"recordType\":\"SER\",\"stage\":\"construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
+                        "{\"interactionId\":\"interaction-51\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
+                        "{\"interactionId\":\"interaction-51\",\"recordType\":\"CER\",\"stage\":\"core_denied\",\"code\":\"minecraft.value.not_removable\"}",
+                        "{\"interactionId\":\"interaction-52\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
+                        "{\"interactionId\":\"interaction-52\",\"recordType\":\"CER\",\"stage\":\"runtime_succeeded\"}",
+                        "{\"interactionId\":\"interaction-53\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
+                        "{\"interactionId\":\"interaction-53\",\"recordType\":\"CER\",\"stage\":\"runtime_failed\",\"code\":\"minecraft.value.not_removable\"}",
+                        "{\"interactionId\":\"interaction-54\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
+                        "{\"interactionId\":\"interaction-54\",\"recordType\":\"CER\",\"stage\":\"runtime_unknown\",\"code\":\"MALFORMED_RUNTIME_DESCRIPTOR\"}"),
+                lines);
+        assertTrue(lines.stream().allMatch(line -> hasOrderedFields(line, line.contains("\"code\""))));
+    }
+
+    @Test
+    void codeAppearsOnlyWhenCurrentAccountabilityMeaningRequiresIt() throws IOException {
+        Path target = GhostAdapterAccountabilityJsonlEmitter.cofferLogPath(tempDir.resolve("logs"), "ghost.jsonl");
+
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                GhostAdapterAccountabilityProjection.toJsonlRecords("interaction-60", constructionRefusedProjection()));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-61", ProjectionKind.CORE_DENIED, "minecraft.value.not_removable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-62", ProjectionKind.RUNTIME_SUCCESS, null));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-63", ProjectionKind.RUNTIME_FAILURE, "minecraft.value.not_removable"));
+        GhostAdapterAccountabilityJsonlEmitter.append(
+                target,
+                records("interaction-64", ProjectionKind.RUNTIME_UNKNOWN, "minecraft.container.unavailable"));
+
+        List<String> lines = Files.readAllLines(target);
+
+        assertTrue(lines.get(0).contains("\"code\":\"MISSING_BINDING_ID\""));
+        assertFalse(lines.get(1).contains("\"code\""));
+        assertTrue(lines.get(2).contains("\"code\":\"minecraft.value.not_removable\""));
+        assertFalse(lines.get(3).contains("\"code\""));
+        assertFalse(lines.get(4).contains("\"code\""));
+        assertFalse(lines.get(5).contains("\"code\""));
+        assertTrue(lines.get(6).contains("\"code\":\"minecraft.value.not_removable\""));
+        assertFalse(lines.get(7).contains("\"code\""));
+        assertTrue(lines.get(8).contains("\"code\":\"minecraft.container.unavailable\""));
+        assertTrue(lines.stream().noneMatch(line -> line.contains(":null")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"code\":\"\"")));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("\"explanation\"")));
+    }
+
     private static List<Map<String, Object>> records(
             String interactionId,
             ProjectionKind kind,
@@ -290,5 +363,19 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         assertEquals(interactionId, extractInteractionId(lines.get(startIndex + 1)));
         assertEquals(firstStage, extractStage(lines.get(startIndex)));
         assertEquals(secondStage, extractStage(lines.get(startIndex + 1)));
+    }
+
+    private static boolean hasOrderedFields(String line, boolean hasCode) {
+        int interactionIndex = line.indexOf("\"interactionId\"");
+        int recordTypeIndex = line.indexOf("\"recordType\"");
+        int stageIndex = line.indexOf("\"stage\"");
+        if (!(interactionIndex < recordTypeIndex && recordTypeIndex < stageIndex)) {
+            return false;
+        }
+        if (!hasCode) {
+            return line.indexOf("\"code\"") < 0;
+        }
+        int codeIndex = line.indexOf("\"code\"");
+        return stageIndex < codeIndex;
     }
 }
