@@ -23,15 +23,19 @@ final class CofferMinecraftLifecycleAccountability {
     }
 
     void recordServerStarted(Path runDirectory) {
-        append(runDirectory, "fabric_server_started", null);
+        append(runDirectory, "SER", "fabric_server_started", null);
     }
 
     void recordServerStopped(Path runDirectory) {
-        append(runDirectory, "fabric_server_stopped", null);
+        append(runDirectory, "SER", "fabric_server_stopped", null);
     }
 
     void recordConstructionRefused(Path runDirectory, String code) {
-        append(runDirectory, "fabric_construction_refused", code);
+        append(runDirectory, "SER", "fabric_construction_refused", code);
+    }
+
+    void recordCoreDenied(Path runDirectory, String code) {
+        append(runDirectory, "CER", "fabric_core_denied", code);
     }
 
     Path logPath(Path runDirectory) {
@@ -40,16 +44,23 @@ final class CofferMinecraftLifecycleAccountability {
     }
 
     String toJsonLine(String interactionId, String stage) {
-        return toJsonLine(interactionId, stage, null);
+        return toJsonLine(interactionId, "SER", stage, null);
     }
 
     String toJsonLine(String interactionId, String stage, String code) {
+        return toJsonLine(interactionId, "SER", stage, code);
+    }
+
+    String toJsonLine(String interactionId, String recordType, String stage, String code) {
         Objects.requireNonNull(interactionId, "interactionId");
+        Objects.requireNonNull(recordType, "recordType");
         Objects.requireNonNull(stage, "stage");
         StringBuilder json = new StringBuilder();
         json.append("{\"interactionId\":\"")
                 .append(escape(interactionId))
-                .append("\",\"recordType\":\"SER\",\"stage\":\"")
+                .append("\",\"recordType\":\"")
+                .append(escape(recordType))
+                .append("\",\"stage\":\"")
                 .append(escape(stage))
                 .append("\"");
         if (code != null) {
@@ -59,13 +70,13 @@ final class CofferMinecraftLifecycleAccountability {
         return json.toString();
     }
 
-    private void append(Path runDirectory, String stage, String code) {
+    private void append(Path runDirectory, String recordType, String stage, String code) {
         Path target = logPath(runDirectory);
         try {
             Files.createDirectories(Objects.requireNonNull(target.getParent(), "target parent"));
             Files.writeString(
                     target,
-                    toJsonLine(interactionIdFactory.get(), stage, code) + System.lineSeparator(),
+                    toJsonLine(interactionIdFactory.get(), recordType, stage, code) + System.lineSeparator(),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND);

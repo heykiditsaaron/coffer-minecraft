@@ -17,6 +17,8 @@ public final class CofferMinecraftFabricEntrypoint implements ModInitializer {
             CofferMinecraftLifecycleAccountability.create();
     private static final CofferMinecraftFabricConstructionContactProbe CONSTRUCTION_CONTACT_PROBE =
             CofferMinecraftFabricConstructionContactProbe.create(LIFECYCLE_ACCOUNTABILITY);
+    private static final CofferMinecraftFabricCoreContactProbe CORE_CONTACT_PROBE =
+            CofferMinecraftFabricCoreContactProbe.create(LIFECYCLE_ACCOUNTABILITY);
     private static volatile CofferMinecraftFabricService service;
 
     public static CofferMinecraftExchangeService exchangeService() {
@@ -37,6 +39,7 @@ public final class CofferMinecraftFabricEntrypoint implements ModInitializer {
             java.nio.file.Path runDirectory = server.getRunDirectory().toPath();
             emitLifecycleRecord(runDirectory, true);
             emitStartupConstructionProbe(runDirectory);
+            emitStartupCoreProbe(runDirectory);
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             emitLifecycleRecord(server.getRunDirectory().toPath(), false);
@@ -62,6 +65,14 @@ public final class CofferMinecraftFabricEntrypoint implements ModInitializer {
             CONSTRUCTION_CONTACT_PROBE.recordStartupProbe(runDirectory);
         } catch (RuntimeException exception) {
             LOGGER.warn("Fabric startup construction contact probe failed", exception);
+        }
+    }
+
+    private static void emitStartupCoreProbe(java.nio.file.Path runDirectory) {
+        try {
+            CORE_CONTACT_PROBE.recordStartupProbe(runDirectory);
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Fabric startup core contact probe failed", exception);
         }
     }
 
