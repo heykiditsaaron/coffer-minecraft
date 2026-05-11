@@ -63,4 +63,25 @@ class CofferMinecraftLifecycleAccountabilityTest {
         assertFalse(line.contains("\"explanation\""));
         assertFalse(line.contains(":null"));
     }
+
+    @Test
+    void constructionRefusalLineRemainsMinimalAndDistinguishableFromLifecycle() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
+        CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
+                () -> "lifecycle-" + counter.incrementAndGet());
+
+        accountability.recordServerStarted(tempDir);
+        accountability.recordConstructionRefused(tempDir, "MISSING_BINDING_ID");
+
+        List<String> lines = Files.readAllLines(accountability.logPath(tempDir));
+
+        assertIterableEquals(
+                List.of(
+                        "{\"interactionId\":\"lifecycle-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                        "{\"interactionId\":\"lifecycle-2\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}"),
+                lines);
+        assertFalse(lines.get(1).contains("\"runtime\":"));
+        assertFalse(lines.get(1).contains("\"timeline\":"));
+        assertFalse(lines.get(1).contains("\"explanation\""));
+    }
 }

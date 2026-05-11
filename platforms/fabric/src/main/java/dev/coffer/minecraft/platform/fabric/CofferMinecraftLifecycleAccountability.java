@@ -23,11 +23,15 @@ final class CofferMinecraftLifecycleAccountability {
     }
 
     void recordServerStarted(Path runDirectory) {
-        append(runDirectory, "fabric_server_started");
+        append(runDirectory, "fabric_server_started", null);
     }
 
     void recordServerStopped(Path runDirectory) {
-        append(runDirectory, "fabric_server_stopped");
+        append(runDirectory, "fabric_server_stopped", null);
+    }
+
+    void recordConstructionRefused(Path runDirectory, String code) {
+        append(runDirectory, "fabric_construction_refused", code);
     }
 
     Path logPath(Path runDirectory) {
@@ -36,22 +40,32 @@ final class CofferMinecraftLifecycleAccountability {
     }
 
     String toJsonLine(String interactionId, String stage) {
-        Objects.requireNonNull(interactionId, "interactionId");
-        Objects.requireNonNull(stage, "stage");
-        return "{\"interactionId\":\""
-                + escape(interactionId)
-                + "\",\"recordType\":\"SER\",\"stage\":\""
-                + escape(stage)
-                + "\"}";
+        return toJsonLine(interactionId, stage, null);
     }
 
-    private void append(Path runDirectory, String stage) {
+    String toJsonLine(String interactionId, String stage, String code) {
+        Objects.requireNonNull(interactionId, "interactionId");
+        Objects.requireNonNull(stage, "stage");
+        StringBuilder json = new StringBuilder();
+        json.append("{\"interactionId\":\"")
+                .append(escape(interactionId))
+                .append("\",\"recordType\":\"SER\",\"stage\":\"")
+                .append(escape(stage))
+                .append("\"");
+        if (code != null) {
+            json.append(",\"code\":\"").append(escape(code)).append("\"");
+        }
+        json.append('}');
+        return json.toString();
+    }
+
+    private void append(Path runDirectory, String stage, String code) {
         Path target = logPath(runDirectory);
         try {
             Files.createDirectories(Objects.requireNonNull(target.getParent(), "target parent"));
             Files.writeString(
                     target,
-                    toJsonLine(interactionIdFactory.get(), stage) + System.lineSeparator(),
+                    toJsonLine(interactionIdFactory.get(), stage, code) + System.lineSeparator(),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND);
