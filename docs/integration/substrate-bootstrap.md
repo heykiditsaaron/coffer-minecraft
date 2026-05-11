@@ -106,5 +106,5 @@ With those metadata alignments in place, the repository successfully reached:
 - `./gradlew :platforms:fabric:compileJava`
 
 That proves dependency resolution is working against the current local split
-substrate artifacts and that the preserved source compiles against them at the
-current bootstrap boundary.
+substrate artifacts and that the current inventory binding and Fabric source
+compile against them at the current bootstrap boundary.

@@ -9,6 +9,10 @@ separate substrate repositories.
 
 This audit is read-only with respect to implementation code. It identifies what
 should be deleted, temporarily preserved, added, and deferred before cleanup.
+Some preservation language below reflects the audit-time transition state. The
+current inventory binding has since been compile- and test-proven as candidate
+living architecture, even though discovery-era material elsewhere in the
+repository remains non-canonical historical reference.
 
 ## Current State
 
@@ -47,12 +51,13 @@ confirmed against the substrate repositories.
 
 ## Preserve Temporarily
 
-The following should remain available as migration/reference material until the
-new foundation is compiling against the split substrate repos:
+The following should remain available while the re-foundation boundary is being
+stabilized against split substrate repos:
 
-- `bindings/inventory/src/main`: reference implementation for Minecraft item
-  descriptors, matching, container mutation, simulation, and payload mapping.
-- `bindings/inventory/src/test`: behavioral reference tests for inventory
+- `bindings/inventory/src/main`: current candidate implementation for Minecraft
+  item descriptors, matching, container mutation, simulation, and payload
+  mapping.
+- `bindings/inventory/src/test`: current behavioral proof for inventory
   semantics.
 - `platforms/fabric/src/main`: reference implementation for Fabric lifecycle,
   player inventory resolution, server-thread scheduling, and service exposure.
@@ -62,9 +67,9 @@ new foundation is compiling against the split substrate repos:
 - `docs/architecture/*.md` and `docs/adapter-integration.md`: useful content
   after terminology and scope are updated.
 
-Preserved material should be treated as candidate source, not authoritative
-design. The substrate repositories are authoritative for Core, Runtime, and
-TransferableValue contracts.
+Current Minecraft inventory binding source should be treated as candidate living
+architecture, not authoritative substrate design. The substrate repositories are
+authoritative for Core, Runtime, and TransferableValue contracts.
 
 ## Target Topology
 
@@ -223,4 +228,3 @@ The following should remain deferred:
   the same contract.
 - Deleting implementation source before the split substrate dependency baseline
   is proven.
-

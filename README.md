@@ -12,13 +12,15 @@ This repository is in controlled re-foundation.
 
 Current work should stay focused on:
 
-- repository structure
-- boundary documentation
-- migration guidance
-- lightweight scaffolding
+- stabilizing Minecraft-specific module boundaries
+- documenting current binding and platform contracts
+- consuming substrate artifacts through explicit dependency edges
+- verifying the current inventory binding and Fabric modules against those boundaries
 
-The current inventory and Fabric source remains available as migration/reference
-material while repository boundaries and dependency expectations are stabilized.
+The current inventory binding is compile- and test-proven candidate architecture
+for Minecraft-specific inventory semantics. The current Fabric source remains
+available as platform implementation material while Fabric feature expansion
+stays deferred.
 
 ## Intended Structure
 

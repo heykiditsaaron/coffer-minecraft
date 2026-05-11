@@ -1,16 +1,36 @@
 # Minecraft Inventory Binding
 
-The Minecraft inventory binding adapts Minecraft inventory semantics to the port interfaces exposed by TransferableValueAuthority.
+The Minecraft inventory binding adapts Minecraft inventory semantics to the
+TransferableValue authority ports consumed from substrate artifacts.
 
-Expected responsibilities include:
+The current implementation is candidate living architecture, not preserved
+migration residue. It already carries the effective Minecraft-specific semantics
+for:
 
-- Minecraft stack descriptor mapping.
-- Container resolution.
-- Storage slot boundaries.
-- Native item equivalence.
-- Simulation and application behavior.
-- Reason codes for rejected, impossible, or no-op operations.
+- descriptor identity and quantity reconstruction
+- exact item and NBT equivalence
+- player inventory container boundaries
+- runtime payload interpretation
+- runtime value-set reconstruction
+- atomic swap simulation and application
 
-The binding should describe Minecraft inventory state and operations in terms TransferableValueAuthority can evaluate and execute. It should not implement platform-neutral authority behavior itself.
+The binding should describe Minecraft inventory state and operations in terms
+that TransferableValue authority can evaluate and execute. It must not implement
+platform-neutral authority behavior itself.
 
-Fabric loader glue is deferred. Loader-specific lifecycle, registration, commands, screens, and runtime integration should be introduced later under a platform-specific module.
+`bindingId` is currently a runtime payload compatibility check, not part of
+descriptor identity and not a separate execution-routing mechanism inside the
+binding. The present behavior is:
+
+- runtime payload generation includes `bindingId`
+- runtime payload interpretation rejects a mismatched `bindingId`
+- runtime payload interpretation accepts missing `bindingId`
+- container resolution and value reconstruction do not derive semantics from
+  `bindingId`
+
+That behavior is intentionally documented rather than changed in this step.
+Making `bindingId` execution-critical or removing it would require a separate
+behavioral decision and new proof.
+
+See [inventory-binding.md](/home/aaron/dev/coffer-minecraft/docs/contracts/inventory-binding.md)
+for the current contract.

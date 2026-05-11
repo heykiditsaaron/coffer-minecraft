@@ -139,6 +139,23 @@ class MinecraftCofferCollaboratorsTest {
         assertEquals(5, stack.getCount());
     }
 
+    @Test
+    void runtimePayloadInterpreterTreatsBindingIdAsOptionalValidationOnly() {
+        MinecraftRuntimePayloadInterpreter interpreter = new MinecraftRuntimePayloadInterpreter();
+
+        assertTrue(interpreter.interpret("minecraft", Map.of(), null).isPresent());
+        assertTrue(interpreter.interpret(
+                        "minecraft",
+                        Map.of(MinecraftRuntimePayloadFactory.BINDING_ID, "minecraft"),
+                        null)
+                .isPresent());
+        assertFalse(interpreter.interpret(
+                        "minecraft",
+                        Map.of(MinecraftRuntimePayloadFactory.BINDING_ID, "other"),
+                        null)
+                .isPresent());
+    }
+
     private static ValueDeclaration value(Map<String, Object> descriptor) {
         return new ValueDeclaration(
                 new ValueRef("value-1"),
