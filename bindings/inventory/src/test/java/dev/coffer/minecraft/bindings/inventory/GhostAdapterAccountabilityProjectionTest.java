@@ -3,12 +3,14 @@ package dev.coffer.minecraft.bindings.inventory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.coffer.minecraft.testsupport.ghostadapter.GhostAdapterAccountabilityProjection;
 import dev.coffer.minecraft.testsupport.ghostadapter.GhostAdapterExchangeHarness;
 import dev.coffer.minecraft.testsupport.ghostadapter.GhostAdapterExchangeHarness.GhostAdapterAtomicSwapRequest;
 import dev.coffer.minecraft.testsupport.ghostadapter.GhostAdapterExchangeHarness.GhostAdapterProjection;
+import dev.coffer.minecraft.testsupport.ghostadapter.GhostAdapterExchangeHarness.ProjectionKind;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -184,7 +186,71 @@ class GhostAdapterAccountabilityProjectionTest {
                         "stage", "runtime_unknown",
                         "code", MinecraftPlayerInventoryContainer.CONTAINER_UNAVAILABLE),
                 records.get(1));
-        assertTrue(records.stream().allMatch(record -> record.size() <= 4));
+        assertMinimal(records);
+    }
+
+    @Test
+    void malformedRuntimeUnknownKeepsSameMinimalProjectionShape() {
+        GhostAdapterProjection projection = new GhostAdapterProjection(
+                ProjectionKind.RUNTIME_UNKNOWN,
+                "MALFORMED_RUNTIME_DESCRIPTOR",
+                null,
+                null,
+                null);
+
+        List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                "interaction-6",
+                projection);
+
+        assertEquals(2, records.size());
+        assertEquals(
+                Map.of(
+                        "interactionId", "interaction-6",
+                        "recordType", "SER",
+                        "stage", "captured"),
+                records.get(0));
+        assertEquals(
+                Map.of(
+                        "interactionId", "interaction-6",
+                        "recordType", "CER",
+                        "stage", "runtime_unknown",
+                        "code", "MALFORMED_RUNTIME_DESCRIPTOR"),
+                records.get(1));
+        assertMinimal(records);
+    }
+
+    @Test
+    void unknownCauseVariantDoesNotCreateContradictoryIdentityOrExtraLayers() {
+        List<Map<String, Object>> malformedRecords = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                "interaction-7",
+                new GhostAdapterProjection(
+                        ProjectionKind.RUNTIME_UNKNOWN,
+                        "MALFORMED_RUNTIME_DESCRIPTOR",
+                        null,
+                        null,
+                        null));
+        List<Map<String, Object>> disappearanceRecords = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                "interaction-8",
+                new GhostAdapterProjection(
+                        ProjectionKind.RUNTIME_UNKNOWN,
+                        MinecraftPlayerInventoryContainer.CONTAINER_UNAVAILABLE,
+                        null,
+                        null,
+                        null));
+
+        assertEquals(2, malformedRecords.size());
+        assertEquals(2, disappearanceRecords.size());
+        assertIterableEquals(
+                List.of("interaction-7", "interaction-7"),
+                malformedRecords.stream().map(record -> (String) record.get("interactionId")).toList());
+        assertIterableEquals(
+                List.of("interaction-8", "interaction-8"),
+                disappearanceRecords.stream().map(record -> (String) record.get("interactionId")).toList());
+        assertEquals("runtime_unknown", malformedRecords.get(1).get("stage"));
+        assertEquals("runtime_unknown", disappearanceRecords.get(1).get("stage"));
+        assertNotEquals(malformedRecords.get(1).get("code"), disappearanceRecords.get(1).get("code"));
+        assertMinimal(malformedRecords);
+        assertMinimal(disappearanceRecords);
     }
 
     private static GhostAdapterExchangeHarness harness(List<ItemStack> firstSlots, List<ItemStack> secondSlots) {
@@ -250,5 +316,13 @@ class GhostAdapterAccountabilityProjectionTest {
 
     private static List<ItemStack> mutableSlots(ItemStack... slots) {
         return new ArrayList<>(List.of(slots));
+    }
+
+    private static void assertMinimal(List<Map<String, Object>> records) {
+        assertTrue(records.stream().allMatch(record -> record.size() <= 4));
+        assertTrue(records.stream().allMatch(record -> !record.containsKey("runtime")));
+        assertTrue(records.stream().allMatch(record -> !record.containsKey("ser")));
+        assertTrue(records.stream().allMatch(record -> !record.containsKey("cer")));
+        assertTrue(records.stream().allMatch(record -> !record.containsKey("explanation")));
     }
 }
