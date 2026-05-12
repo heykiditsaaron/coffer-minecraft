@@ -9,17 +9,26 @@ import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.function.LongSupplier;
 
 final class CofferMinecraftLifecycleAccountability {
     private static final String FILE_NAME = "fabric-lifecycle.jsonl";
     private final Supplier<String> interactionIdFactory;
+    private final LongSupplier timestampFactory;
 
     CofferMinecraftLifecycleAccountability(Supplier<String> interactionIdFactory) {
+        this(interactionIdFactory, System::currentTimeMillis);
+    }
+
+    CofferMinecraftLifecycleAccountability(Supplier<String> interactionIdFactory, LongSupplier timestampFactory) {
         this.interactionIdFactory = Objects.requireNonNull(interactionIdFactory, "interactionIdFactory");
+        this.timestampFactory = Objects.requireNonNull(timestampFactory, "timestampFactory");
     }
 
     static CofferMinecraftLifecycleAccountability create() {
-        return new CofferMinecraftLifecycleAccountability(() -> "fabric-lifecycle-" + UUID.randomUUID());
+        return new CofferMinecraftLifecycleAccountability(
+                () -> "fabric-lifecycle-" + UUID.randomUUID(),
+                System::currentTimeMillis);
     }
 
     void recordServerStarted(Path runDirectory) {
@@ -48,19 +57,33 @@ final class CofferMinecraftLifecycleAccountability {
     }
 
     String toJsonLine(String interactionId, String stage) {
-        return toJsonLine(interactionId, "SER", stage, null);
+        return toJsonLine(timestampFactory.getAsLong(), interactionId, "SER", stage, null);
     }
 
     String toJsonLine(String interactionId, String stage, String code) {
-        return toJsonLine(interactionId, "SER", stage, code);
+        return toJsonLine(timestampFactory.getAsLong(), interactionId, "SER", stage, code);
+    }
+
+    String toJsonLine(long timestamp, String interactionId, String stage) {
+        return toJsonLine(timestamp, interactionId, "SER", stage, null);
+    }
+
+    String toJsonLine(long timestamp, String interactionId, String stage, String code) {
+        return toJsonLine(timestamp, interactionId, "SER", stage, code);
     }
 
     String toJsonLine(String interactionId, String recordType, String stage, String code) {
+        return toJsonLine(timestampFactory.getAsLong(), interactionId, recordType, stage, code);
+    }
+
+    String toJsonLine(long timestamp, String interactionId, String recordType, String stage, String code) {
         Objects.requireNonNull(interactionId, "interactionId");
         Objects.requireNonNull(recordType, "recordType");
         Objects.requireNonNull(stage, "stage");
         StringBuilder json = new StringBuilder();
-        json.append("{\"interactionId\":\"")
+        json.append("{\"timestamp\":")
+                .append(timestamp)
+                .append(",\"interactionId\":\"")
                 .append(escape(interactionId))
                 .append("\",\"recordType\":\"")
                 .append(escape(recordType))
@@ -80,7 +103,8 @@ final class CofferMinecraftLifecycleAccountability {
             Files.createDirectories(Objects.requireNonNull(target.getParent(), "target parent"));
             Files.writeString(
                     target,
-                    toJsonLine(interactionIdFactory.get(), recordType, stage, code) + System.lineSeparator(),
+                    toJsonLine(timestampFactory.getAsLong(), interactionIdFactory.get(), recordType, stage, code)
+                            + System.lineSeparator(),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND);

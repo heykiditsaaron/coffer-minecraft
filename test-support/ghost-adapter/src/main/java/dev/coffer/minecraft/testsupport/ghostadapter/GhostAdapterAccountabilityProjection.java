@@ -20,36 +20,46 @@ public final class GhostAdapterAccountabilityProjection {
     public static List<Map<String, Object>> toJsonlRecords(
             String interactionId,
             GhostAdapterProjection projection) {
+        return toJsonlRecords(System.currentTimeMillis(), interactionId, projection);
+    }
+
+    public static List<Map<String, Object>> toJsonlRecords(
+            long timestamp,
+            String interactionId,
+            GhostAdapterProjection projection) {
         Objects.requireNonNull(interactionId, "interactionId");
         Objects.requireNonNull(projection, "projection");
 
         if (projection.kind() == ProjectionKind.CONSTRUCTION_REFUSED) {
             return List.of(record(
+                    timestamp,
                     interactionId,
                     "SER",
                     "construction_refused",
                     projection.refusal().reason().name()));
         }
 
-        Map<String, Object> ser = record(interactionId, "SER", "captured", null);
+        Map<String, Object> ser = record(timestamp, interactionId, "SER", "captured", null);
         if (projection.kind() == ProjectionKind.CORE_DENIED) {
-            return List.of(ser, record(interactionId, "CER", "core_denied", projection.reasonCode()));
+            return List.of(ser, record(timestamp, interactionId, "CER", "core_denied", projection.reasonCode()));
         }
         if (projection.kind() == ProjectionKind.RUNTIME_SUCCESS) {
-            return List.of(ser, record(interactionId, "CER", "runtime_succeeded", null));
+            return List.of(ser, record(timestamp, interactionId, "CER", "runtime_succeeded", null));
         }
         if (projection.kind() == ProjectionKind.RUNTIME_FAILURE) {
-            return List.of(ser, record(interactionId, "CER", "runtime_failed", projection.reasonCode()));
+            return List.of(ser, record(timestamp, interactionId, "CER", "runtime_failed", projection.reasonCode()));
         }
-        return List.of(ser, record(interactionId, "CER", "runtime_unknown", projection.reasonCode()));
+        return List.of(ser, record(timestamp, interactionId, "CER", "runtime_unknown", projection.reasonCode()));
     }
 
     private static Map<String, Object> record(
+            long timestamp,
             String interactionId,
             String recordType,
             String stage,
             String code) {
         Map<String, Object> record = new LinkedHashMap<>();
+        record.put("timestamp", timestamp);
         record.put("interactionId", interactionId);
         record.put("recordType", recordType);
         record.put("stage", stage);

@@ -3,6 +3,7 @@ package dev.coffer.minecraft.platform.fabric;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class CofferMinecraftFabricConstructionContactProbeTest {
+    private static final long TIMESTAMP = 1_700_000_000_000L;
     @TempDir
     Path tempDir;
 
@@ -21,7 +23,8 @@ class CofferMinecraftFabricConstructionContactProbeTest {
     void startupProbeTouchesPavedConstructionAndRecordsRefusalWithoutRuntimeParticipation() throws IOException {
         AtomicInteger counter = new AtomicInteger();
         CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
-                () -> "fabric-contact-" + counter.incrementAndGet());
+                () -> "fabric-contact-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
         CofferMinecraftFabricConstructionContactProbe probe = new CofferMinecraftFabricConstructionContactProbe(
                 TransferableValueExchangePayloadConstruction::constructAtomicSwap,
                 accountability);
@@ -33,8 +36,8 @@ class CofferMinecraftFabricConstructionContactProbeTest {
 
         assertIterableEquals(
                 List.of(
-                        "{\"interactionId\":\"fabric-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
-                        "{\"interactionId\":\"fabric-contact-2\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}"),
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-contact-2\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}"),
                 lines);
         assertFalse(lines.get(1).contains("\"runtime\":"));
         assertFalse(lines.get(1).contains("\"timeline\":"));
@@ -45,7 +48,8 @@ class CofferMinecraftFabricConstructionContactProbeTest {
     void startupProbeDeepensParticipationWithoutFabricatingCoreOrRuntime() throws IOException {
         AtomicInteger counter = new AtomicInteger();
         CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
-                () -> "fabric-contact-" + counter.incrementAndGet());
+                () -> "fabric-contact-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
         CofferMinecraftFabricConstructionContactProbe probe = new CofferMinecraftFabricConstructionContactProbe(
                 TransferableValueExchangePayloadConstruction::constructAtomicSwap,
                 accountability);
@@ -55,8 +59,9 @@ class CofferMinecraftFabricConstructionContactProbeTest {
         String line = Files.readAllLines(accountability.logPath(tempDir)).get(0);
 
         assertEquals(
-                "{\"interactionId\":\"fabric-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
+                "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
                 line);
+        assertTrue(line.startsWith("{\"timestamp\":1700000000000"));
         assertFalse(line.contains("\"recordType\":\"CER\""));
         assertFalse(line.contains("\"runtime\":"));
         assertFalse(line.contains("\"execution\":"));

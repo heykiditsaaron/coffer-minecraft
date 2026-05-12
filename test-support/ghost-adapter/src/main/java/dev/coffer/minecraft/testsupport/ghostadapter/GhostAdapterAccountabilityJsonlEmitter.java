@@ -19,7 +19,7 @@ import java.util.Set;
  * <p>This is not production logging infrastructure.
  */
 public final class GhostAdapterAccountabilityJsonlEmitter {
-    private static final List<String> FIELD_ORDER = List.of("interactionId", "recordType", "stage", "code");
+    private static final List<String> FIELD_ORDER = List.of("timestamp", "interactionId", "recordType", "stage", "code");
     private static final Set<String> ALLOWED_FIELDS = Set.copyOf(FIELD_ORDER);
 
     private GhostAdapterAccountabilityJsonlEmitter() {
@@ -66,7 +66,12 @@ public final class GhostAdapterAccountabilityJsonlEmitter {
             }
             first = false;
             json.append('"').append(field).append('"').append(':');
-            json.append('"').append(escape((String) record.get(field))).append('"');
+            Object value = record.get(field);
+            if ("timestamp".equals(field)) {
+                json.append(((Number) value).longValue());
+            } else {
+                json.append('"').append(escape((String) value)).append('"');
+            }
         }
         json.append('}');
         return json.toString();
@@ -78,9 +83,21 @@ public final class GhostAdapterAccountabilityJsonlEmitter {
         if (!unexpectedFields.isEmpty()) {
             throw new IllegalArgumentException("Unsupported accountability fields: " + unexpectedFields);
         }
+        if (!record.containsKey("timestamp")) {
+            throw new IllegalArgumentException("Missing required accountability field: timestamp");
+        }
         for (String field : FIELD_ORDER) {
             Object value = record.get(field);
-            if (value != null && !(value instanceof String)) {
+            if (value == null) {
+                continue;
+            }
+            if ("timestamp".equals(field)) {
+                if (!(value instanceof Number)) {
+                    throw new IllegalArgumentException("Field timestamp must be numeric");
+                }
+                continue;
+            }
+            if (!(value instanceof String)) {
                 throw new IllegalArgumentException("Field " + field + " must be a string");
             }
         }

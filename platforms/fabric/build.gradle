@@ -13,7 +13,7 @@ dependencies {
     implementation "${coffer_group}:coffer-transferable-value-authority:${coffer_version}"
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
-    compileOnly "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
 
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'

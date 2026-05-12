@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class GhostAdapterAccountabilityJsonlEmitterTest {
+    private static final long TIMESTAMP = 1_700_000_000_000L;
     @TempDir
     Path tempDir;
 
@@ -31,16 +32,17 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         List<String> lines = Files.readAllLines(target);
 
         assertEquals(4, lines.size());
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertTrue(lines.get(0).contains("\"interactionId\":\"interaction-1\""));
         assertTrue(lines.get(1).contains("\"interactionId\":\"interaction-1\""));
         assertTrue(lines.get(2).contains("\"interactionId\":\"interaction-2\""));
         assertTrue(lines.get(3).contains("\"interactionId\":\"interaction-2\""));
-        assertEquals("{\"interactionId\":\"interaction-1\",\"recordType\":\"SER\",\"stage\":\"captured\"}", lines.get(0));
+        assertEquals(jsonLine("interaction-1", "SER", "captured", null), lines.get(0));
         assertEquals(
-                "{\"interactionId\":\"interaction-1\",\"recordType\":\"CER\",\"stage\":\"core_denied\",\"code\":\"minecraft.value.not_removable\"}",
+                jsonLine("interaction-1", "CER", "core_denied", "minecraft.value.not_removable"),
                 lines.get(1));
         assertEquals(
-                "{\"interactionId\":\"interaction-2\",\"recordType\":\"CER\",\"stage\":\"runtime_unknown\",\"code\":\"MALFORMED_RUNTIME_DESCRIPTOR\"}",
+                jsonLine("interaction-2", "CER", "runtime_unknown", "MALFORMED_RUNTIME_DESCRIPTOR"),
                 lines.get(3));
     }
 
@@ -53,6 +55,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         List<String> lines = Files.readAllLines(target);
 
         assertEquals(2, lines.size());
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertFalse(lines.get(0).contains("\"code\""));
         assertFalse(lines.get(1).contains("\"code\""));
         assertFalse(lines.get(0).contains("\"runtime\":"));
@@ -68,11 +71,13 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         GhostAdapterAccountabilityJsonlEmitter.append(target, records("interaction-4", ProjectionKind.RUNTIME_FAILURE, "minecraft.value.not_removable"));
 
         List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-4",
                 projection(ProjectionKind.RUNTIME_FAILURE, "minecraft.value.not_removable"));
         List<String> lines = Files.readAllLines(target);
 
         assertEquals(records.size(), lines.size());
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertIterableEquals(
                 List.of("interaction-4", "interaction-4"),
                 lines.stream().map(GhostAdapterAccountabilityJsonlEmitterTest::extractInteractionId).toList());
@@ -101,12 +106,14 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         GhostAdapterAccountabilityJsonlEmitter.append(
                 target,
                 GhostAdapterAccountabilityProjection.toJsonlRecords(
+                        TIMESTAMP,
                         "interaction-13",
                         constructionRefusedProjection()));
 
         List<String> lines = Files.readAllLines(target);
 
         assertEquals(7, lines.size());
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertIterableEquals(
                 List.of(
                         "interaction-10",
@@ -146,6 +153,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         List<String> lines = Files.readAllLines(target);
 
         assertEquals(6, lines.size());
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertLineage(lines, 0, "interaction-20", "captured", "runtime_failed");
         assertLineage(lines, 2, "interaction-21", "captured", "runtime_unknown");
         assertLineage(lines, 4, "interaction-22", "captured", "runtime_succeeded");
@@ -174,6 +182,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         List<String> lines = Files.readAllLines(target);
 
         assertEquals(6, lines.size());
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertIterableEquals(
                 List.of(
                         "interaction-30",
@@ -206,7 +215,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
 
         GhostAdapterAccountabilityJsonlEmitter.append(
                 target,
-                GhostAdapterAccountabilityProjection.toJsonlRecords("interaction-40", constructionRefusedProjection()));
+                GhostAdapterAccountabilityProjection.toJsonlRecords(TIMESTAMP, "interaction-40", constructionRefusedProjection()));
         GhostAdapterAccountabilityJsonlEmitter.append(
                 target,
                 records("interaction-41", ProjectionKind.CORE_DENIED, "minecraft.value.not_removable"));
@@ -223,6 +232,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
         List<String> lines = Files.readAllLines(target);
 
         assertEquals(9, lines.size());
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertIterableEquals(
                 List.of(
                         "interaction-40",
@@ -248,7 +258,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
 
         GhostAdapterAccountabilityJsonlEmitter.append(
                 target,
-                GhostAdapterAccountabilityProjection.toJsonlRecords("interaction-50", constructionRefusedProjection()));
+                GhostAdapterAccountabilityProjection.toJsonlRecords(TIMESTAMP, "interaction-50", constructionRefusedProjection()));
         GhostAdapterAccountabilityJsonlEmitter.append(
                 target,
                 records("interaction-51", ProjectionKind.CORE_DENIED, "minecraft.value.not_removable"));
@@ -264,17 +274,18 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
 
         List<String> lines = Files.readAllLines(target);
 
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertIterableEquals(
                 List.of(
-                        "{\"interactionId\":\"interaction-50\",\"recordType\":\"SER\",\"stage\":\"construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
-                        "{\"interactionId\":\"interaction-51\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
-                        "{\"interactionId\":\"interaction-51\",\"recordType\":\"CER\",\"stage\":\"core_denied\",\"code\":\"minecraft.value.not_removable\"}",
-                        "{\"interactionId\":\"interaction-52\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
-                        "{\"interactionId\":\"interaction-52\",\"recordType\":\"CER\",\"stage\":\"runtime_succeeded\"}",
-                        "{\"interactionId\":\"interaction-53\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
-                        "{\"interactionId\":\"interaction-53\",\"recordType\":\"CER\",\"stage\":\"runtime_failed\",\"code\":\"minecraft.value.not_removable\"}",
-                        "{\"interactionId\":\"interaction-54\",\"recordType\":\"SER\",\"stage\":\"captured\"}",
-                        "{\"interactionId\":\"interaction-54\",\"recordType\":\"CER\",\"stage\":\"runtime_unknown\",\"code\":\"MALFORMED_RUNTIME_DESCRIPTOR\"}"),
+                        jsonLine("interaction-50", "SER", "construction_refused", "MISSING_BINDING_ID"),
+                        jsonLine("interaction-51", "SER", "captured", null),
+                        jsonLine("interaction-51", "CER", "core_denied", "minecraft.value.not_removable"),
+                        jsonLine("interaction-52", "SER", "captured", null),
+                        jsonLine("interaction-52", "CER", "runtime_succeeded", null),
+                        jsonLine("interaction-53", "SER", "captured", null),
+                        jsonLine("interaction-53", "CER", "runtime_failed", "minecraft.value.not_removable"),
+                        jsonLine("interaction-54", "SER", "captured", null),
+                        jsonLine("interaction-54", "CER", "runtime_unknown", "MALFORMED_RUNTIME_DESCRIPTOR")),
                 lines);
         assertTrue(lines.stream().allMatch(line -> hasOrderedFields(line, line.contains("\"code\""))));
     }
@@ -285,7 +296,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
 
         GhostAdapterAccountabilityJsonlEmitter.append(
                 target,
-                GhostAdapterAccountabilityProjection.toJsonlRecords("interaction-60", constructionRefusedProjection()));
+                GhostAdapterAccountabilityProjection.toJsonlRecords(TIMESTAMP, "interaction-60", constructionRefusedProjection()));
         GhostAdapterAccountabilityJsonlEmitter.append(
                 target,
                 records("interaction-61", ProjectionKind.CORE_DENIED, "minecraft.value.not_removable"));
@@ -301,6 +312,7 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
 
         List<String> lines = Files.readAllLines(target);
 
+        assertTrue(lines.stream().allMatch(line -> line.startsWith("{\"timestamp\":")));
         assertTrue(lines.get(0).contains("\"code\":\"MISSING_BINDING_ID\""));
         assertFalse(lines.get(1).contains("\"code\""));
         assertTrue(lines.get(2).contains("\"code\":\"minecraft.value.not_removable\""));
@@ -320,8 +332,22 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
             ProjectionKind kind,
             String reasonCode) {
         return GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 interactionId,
                 projection(kind, reasonCode));
+    }
+
+    private static String jsonLine(String interactionId, String recordType, String stage, String code) {
+        StringBuilder json = new StringBuilder();
+        json.append("{\"timestamp\":").append(TIMESTAMP)
+                .append(",\"interactionId\":\"").append(interactionId)
+                .append("\",\"recordType\":\"").append(recordType)
+                .append("\",\"stage\":\"").append(stage).append("\"");
+        if (code != null) {
+            json.append(",\"code\":\"").append(code).append("\"");
+        }
+        json.append('}');
+        return json.toString();
     }
 
     private static GhostAdapterProjection projection(ProjectionKind kind, String reasonCode) {
@@ -340,6 +366,11 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
     }
 
     private static String extractInteractionId(String line) {
+        String timestampPrefix = "{\"timestamp\":";
+        int timestampEnd = line.indexOf(',');
+        if (line.indexOf(timestampPrefix) != 0 || timestampEnd < 0) {
+            throw new IllegalStateException("Line does not start with a timestamp: " + line);
+        }
         String prefix = "\"interactionId\":\"";
         int start = line.indexOf(prefix) + prefix.length();
         int end = line.indexOf('"', start);
@@ -366,10 +397,14 @@ class GhostAdapterAccountabilityJsonlEmitterTest {
     }
 
     private static boolean hasOrderedFields(String line, boolean hasCode) {
+        if (!line.startsWith("{\"timestamp\":")) {
+            return false;
+        }
+        int timestampIndex = line.indexOf("\"timestamp\"");
         int interactionIndex = line.indexOf("\"interactionId\"");
         int recordTypeIndex = line.indexOf("\"recordType\"");
         int stageIndex = line.indexOf("\"stage\"");
-        if (!(interactionIndex < recordTypeIndex && recordTypeIndex < stageIndex)) {
+        if (!(timestampIndex < interactionIndex && interactionIndex < recordTypeIndex && recordTypeIndex < stageIndex)) {
             return false;
         }
         if (!hasCode) {

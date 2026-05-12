@@ -31,6 +31,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class GhostAdapterAccountabilityProjectionTest {
+    private static final long TIMESTAMP = 1_700_000_000_000L;
     private static final UUID FIRST_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000311");
     private static final UUID SECOND_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000312");
     private static final ActorRef FIRST_ACTOR =
@@ -52,12 +53,14 @@ class GhostAdapterAccountabilityProjectionTest {
                 .submitAtomicSwap(request(5, 7, " "));
 
         List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-1",
                 projection);
 
         assertEquals(1, records.size());
         assertEquals(
                 Map.of(
+                        "timestamp", TIMESTAMP,
                         "interactionId", "interaction-1",
                         "recordType", "SER",
                         "stage", "construction_refused",
@@ -73,17 +76,21 @@ class GhostAdapterAccountabilityProjectionTest {
                 .submitAtomicSwap(request(5, 7, "minecraft-inventory"));
 
         List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-2",
                 projection);
 
         assertIterableEquals(
                 List.of("interaction-2", "interaction-2"),
                 records.stream().map(record -> (String) record.get("interactionId")).toList());
+        assertEquals(TIMESTAMP, records.get(0).get("timestamp"));
+        assertEquals(TIMESTAMP, records.get(1).get("timestamp"));
         assertEquals("SER", records.get(0).get("recordType"));
         assertEquals("captured", records.get(0).get("stage"));
         assertFalse(records.get(0).containsKey("code"));
         assertEquals(
                 Map.of(
+                        "timestamp", TIMESTAMP,
                         "interactionId", "interaction-2",
                         "recordType", "CER",
                         "stage", "core_denied",
@@ -99,11 +106,15 @@ class GhostAdapterAccountabilityProjectionTest {
                 .submitAtomicSwap(request(5, 7, "minecraft-inventory"));
 
         List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-3",
                 projection);
 
+        assertEquals(TIMESTAMP, records.get(0).get("timestamp"));
+        assertEquals(TIMESTAMP, records.get(1).get("timestamp"));
         assertEquals(
                 Map.of(
+                        "timestamp", TIMESTAMP,
                         "interactionId", "interaction-3",
                         "recordType", "CER",
                         "stage", "runtime_succeeded"),
@@ -132,11 +143,15 @@ class GhostAdapterAccountabilityProjectionTest {
                 .submitAtomicSwap(request(5, 7, "minecraft-inventory"));
 
         List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-4",
                 projection);
 
+        assertEquals(TIMESTAMP, records.get(0).get("timestamp"));
+        assertEquals(TIMESTAMP, records.get(1).get("timestamp"));
         assertEquals(
                 Map.of(
+                        "timestamp", TIMESTAMP,
                         "interactionId", "interaction-4",
                         "recordType", "CER",
                         "stage", "runtime_failed",
@@ -176,11 +191,13 @@ class GhostAdapterAccountabilityProjectionTest {
                 .submitAtomicSwap(request(5, 7, "minecraft-inventory"));
 
         List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-5",
                 projection);
 
         assertEquals(
                 Map.of(
+                        "timestamp", TIMESTAMP,
                         "interactionId", "interaction-5",
                         "recordType", "CER",
                         "stage", "runtime_unknown",
@@ -199,18 +216,21 @@ class GhostAdapterAccountabilityProjectionTest {
                 null);
 
         List<Map<String, Object>> records = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-6",
                 projection);
 
         assertEquals(2, records.size());
         assertEquals(
                 Map.of(
+                        "timestamp", TIMESTAMP,
                         "interactionId", "interaction-6",
                         "recordType", "SER",
                         "stage", "captured"),
                 records.get(0));
         assertEquals(
                 Map.of(
+                        "timestamp", TIMESTAMP,
                         "interactionId", "interaction-6",
                         "recordType", "CER",
                         "stage", "runtime_unknown",
@@ -222,6 +242,7 @@ class GhostAdapterAccountabilityProjectionTest {
     @Test
     void unknownCauseVariantDoesNotCreateContradictoryIdentityOrExtraLayers() {
         List<Map<String, Object>> malformedRecords = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-7",
                 new GhostAdapterProjection(
                         ProjectionKind.RUNTIME_UNKNOWN,
@@ -230,6 +251,7 @@ class GhostAdapterAccountabilityProjectionTest {
                         null,
                         null));
         List<Map<String, Object>> disappearanceRecords = GhostAdapterAccountabilityProjection.toJsonlRecords(
+                TIMESTAMP,
                 "interaction-8",
                 new GhostAdapterProjection(
                         ProjectionKind.RUNTIME_UNKNOWN,
@@ -246,6 +268,10 @@ class GhostAdapterAccountabilityProjectionTest {
         assertIterableEquals(
                 List.of("interaction-8", "interaction-8"),
                 disappearanceRecords.stream().map(record -> (String) record.get("interactionId")).toList());
+        assertEquals(TIMESTAMP, malformedRecords.get(0).get("timestamp"));
+        assertEquals(TIMESTAMP, malformedRecords.get(1).get("timestamp"));
+        assertEquals(TIMESTAMP, disappearanceRecords.get(0).get("timestamp"));
+        assertEquals(TIMESTAMP, disappearanceRecords.get(1).get("timestamp"));
         assertEquals("runtime_unknown", malformedRecords.get(1).get("stage"));
         assertEquals("runtime_unknown", disappearanceRecords.get(1).get("stage"));
         assertNotEquals(malformedRecords.get(1).get("code"), disappearanceRecords.get(1).get("code"));
@@ -319,7 +345,9 @@ class GhostAdapterAccountabilityProjectionTest {
     }
 
     private static void assertMinimal(List<Map<String, Object>> records) {
-        assertTrue(records.stream().allMatch(record -> record.size() <= 4));
+        assertTrue(records.stream().allMatch(record -> record.size() <= 5));
+        assertTrue(records.stream().allMatch(record -> record.containsKey("timestamp")));
+        assertTrue(records.stream().allMatch(record -> record.get("timestamp") instanceof Number));
         assertTrue(records.stream().allMatch(record -> !record.containsKey("runtime")));
         assertTrue(records.stream().allMatch(record -> !record.containsKey("ser")));
         assertTrue(records.stream().allMatch(record -> !record.containsKey("cer")));

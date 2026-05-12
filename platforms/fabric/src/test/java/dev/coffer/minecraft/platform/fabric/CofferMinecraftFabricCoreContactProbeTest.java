@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class CofferMinecraftFabricCoreContactProbeTest {
+    private static final long TIMESTAMP = 1_700_000_000_000L;
     @TempDir
     Path tempDir;
 
@@ -24,7 +25,8 @@ class CofferMinecraftFabricCoreContactProbeTest {
     void startupProbeTouchesCoreAndRecordsDeniedCerWithoutRuntimeParticipation() throws IOException {
         AtomicInteger counter = new AtomicInteger();
         CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
-                () -> "fabric-core-contact-" + counter.incrementAndGet());
+                () -> "fabric-core-contact-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
         CofferMinecraftFabricCoreContactProbe probe = new CofferMinecraftFabricCoreContactProbe(
                 TransferableValueExchangePayloadConstruction::constructAtomicSwap,
                 payload -> CofferCore.arbitrate(
@@ -42,8 +44,8 @@ class CofferMinecraftFabricCoreContactProbeTest {
 
         assertIterableEquals(
                 List.of(
-                        "{\"interactionId\":\"fabric-core-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
-                        "{\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\"}"),
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\"}"),
                 lines);
         assertFalse(lines.get(1).contains("\"runtime\":"));
         assertFalse(lines.get(1).contains("\"execution\":"));
@@ -54,7 +56,8 @@ class CofferMinecraftFabricCoreContactProbeTest {
     void coreDenialRemainsDistinguishableFromConstructionRefusal() throws IOException {
         AtomicInteger counter = new AtomicInteger();
         CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
-                () -> "fabric-core-contact-" + counter.incrementAndGet());
+                () -> "fabric-core-contact-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
 
         accountability.recordConstructionRefused(tempDir, "MISSING_BINDING_ID");
         accountability.recordCoreDenied(tempDir, null);
@@ -63,8 +66,8 @@ class CofferMinecraftFabricCoreContactProbeTest {
 
         assertIterableEquals(
                 List.of(
-                        "{\"interactionId\":\"fabric-core-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
-                        "{\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\"}"),
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\"}"),
                 lines);
     }
 

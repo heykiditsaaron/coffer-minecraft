@@ -13,13 +13,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class CofferMinecraftLifecycleAccountabilityTest {
+    private static final long TIMESTAMP = 1_700_000_000_000L;
     @TempDir
     Path tempDir;
 
     @Test
     void lifecycleRecordsAppendUnderLogsCoffer() throws IOException {
         CofferMinecraftLifecycleAccountability accountability =
-                new CofferMinecraftLifecycleAccountability(() -> "unused");
+                new CofferMinecraftLifecycleAccountability(() -> "unused", () -> TIMESTAMP);
         Path target = accountability.logPath(tempDir);
 
         assertEquals(tempDir.resolve("logs").resolve("coffer").resolve("fabric-lifecycle.jsonl"), target);
@@ -29,7 +30,8 @@ class CofferMinecraftLifecycleAccountabilityTest {
     void startupAndShutdownEmitMinimalSerLinesInAppendOrder() throws IOException {
         java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
         CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
-                () -> "lifecycle-" + counter.incrementAndGet());
+                () -> "lifecycle-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
 
         accountability.recordServerStarted(tempDir);
         accountability.recordServerStopped(tempDir);
@@ -38,23 +40,25 @@ class CofferMinecraftLifecycleAccountabilityTest {
 
         assertIterableEquals(
                 List.of(
-                        "{\"interactionId\":\"lifecycle-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
-                        "{\"interactionId\":\"lifecycle-2\",\"recordType\":\"SER\",\"stage\":\"fabric_server_stopped\"}"),
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-2\",\"recordType\":\"SER\",\"stage\":\"fabric_server_stopped\"}"),
                 lines);
     }
 
     @Test
     void lifecycleLinesPreserveOmissionAndLeftToRightReadability() throws IOException {
         CofferMinecraftLifecycleAccountability accountability =
-                new CofferMinecraftLifecycleAccountability(() -> "lifecycle-readable");
+                new CofferMinecraftLifecycleAccountability(() -> "lifecycle-readable", () -> TIMESTAMP);
 
         accountability.recordServerStarted(tempDir);
 
         String line = Files.readAllLines(accountability.logPath(tempDir)).get(0);
 
         assertEquals(
-                "{\"interactionId\":\"lifecycle-readable\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-readable\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
                 line);
+        assertTrue(line.startsWith("{\"timestamp\":1700000000000"));
+        assertTrue(line.indexOf("\"timestamp\"") < line.indexOf("\"interactionId\""));
         assertTrue(line.indexOf("\"interactionId\"") < line.indexOf("\"recordType\""));
         assertTrue(line.indexOf("\"recordType\"") < line.indexOf("\"stage\""));
         assertFalse(line.contains("\"code\""));
@@ -68,7 +72,8 @@ class CofferMinecraftLifecycleAccountabilityTest {
     void constructionRefusalLineRemainsMinimalAndDistinguishableFromLifecycle() throws IOException {
         java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
         CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
-                () -> "lifecycle-" + counter.incrementAndGet());
+                () -> "lifecycle-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
 
         accountability.recordServerStarted(tempDir);
         accountability.recordConstructionRefused(tempDir, "MISSING_BINDING_ID");
@@ -77,8 +82,8 @@ class CofferMinecraftLifecycleAccountabilityTest {
 
         assertIterableEquals(
                 List.of(
-                        "{\"interactionId\":\"lifecycle-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
-                        "{\"interactionId\":\"lifecycle-2\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}"),
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-2\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}"),
                 lines);
         assertFalse(lines.get(1).contains("\"runtime\":"));
         assertFalse(lines.get(1).contains("\"timeline\":"));
