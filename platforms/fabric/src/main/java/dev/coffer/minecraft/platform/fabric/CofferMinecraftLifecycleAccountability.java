@@ -14,6 +14,7 @@ import java.util.function.LongSupplier;
 final class CofferMinecraftLifecycleAccountability {
     private static final String FILE_NAME = "fabric-lifecycle.jsonl";
     private static final String FABRIC_CORE_SEAM = "fabric_core";
+    private static final String FABRIC_RUNTIME_SEAM = "fabric_runtime";
     private final Supplier<String> interactionIdFactory;
     private final LongSupplier timestampFactory;
 
@@ -50,6 +51,10 @@ final class CofferMinecraftLifecycleAccountability {
 
     void recordCoreApproved(Path runDirectory) {
         append(runDirectory, "CER", "fabric_core_approved", FABRIC_CORE_SEAM, null);
+    }
+
+    void recordRuntimeUnknown(Path runDirectory, String code) {
+        append(runDirectory, "CER", "fabric_runtime_unknown", FABRIC_RUNTIME_SEAM, code);
     }
 
     Path logPath(Path runDirectory) {

@@ -55,6 +55,7 @@ class CofferMinecraftFabricApprovedCoreContactProbeTest {
         assertFalse(lines.get(1).contains("\"runtime\":"));
         assertFalse(lines.get(1).contains("\"execution\":"));
         assertFalse(lines.get(1).contains("\"mutation\":"));
+        assertFalse(lines.get(1).contains("fabric_runtime"));
         assertFalse(lines.get(1).contains("\"code\""));
         assertFalse(lines.get(1).contains(":null"));
     }
@@ -76,6 +77,7 @@ class CofferMinecraftFabricApprovedCoreContactProbeTest {
                         "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-approved-1\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\",\"seam\":\"fabric_core\"}",
                         "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-approved-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_approved\",\"seam\":\"fabric_core\"}"),
                 lines);
+        assertFalse(lines.get(1).contains("fabric_runtime"));
     }
 
     private static ArbitrationResult approvedArbitration(ExchangePayload payload) {
