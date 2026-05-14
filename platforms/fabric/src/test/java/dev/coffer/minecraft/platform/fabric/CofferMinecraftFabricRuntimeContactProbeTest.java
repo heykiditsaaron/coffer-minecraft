@@ -54,6 +54,9 @@ class CofferMinecraftFabricRuntimeContactProbeTest {
         assertFalse(lines.get(2).contains("\"mutation\":"));
         assertFalse(lines.get(2).contains("\"player\""));
         assertFalse(lines.get(2).contains("\"inventory\""));
+        assertFalse(lines.get(0).contains("\"seam\""));
+        assertFalse(lines.get(1).contains("\"seam\":\"fabric_runtime\""));
+        assertFalse(lines.get(1).contains("\"code\""));
     }
 
     @Test
@@ -80,6 +83,41 @@ class CofferMinecraftFabricRuntimeContactProbeTest {
                 lines);
         assertFalse(lines.get(0).contains("fabric_runtime"));
         assertFalse(lines.get(1).contains("fabric_core"));
+    }
+
+    @Test
+    void runtimeSeamIsAbsentFromNonRuntimeContactRecords() throws IOException {
+        AtomicInteger counter = new AtomicInteger();
+        CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
+                () -> "fabric-runtime-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
+        CofferMinecraftFabricApprovedCoreContactProbe coreProbe = new CofferMinecraftFabricApprovedCoreContactProbe(
+                TransferableValueExchangePayloadConstruction::constructAtomicSwap,
+                CofferMinecraftFabricRuntimeContactProbeTest::approvedArbitration,
+                accountability);
+
+        accountability.recordServerStarted(tempDir);
+        accountability.recordConstructionRefused(tempDir, "MISSING_BINDING_ID");
+        accountability.recordCoreDenied(tempDir, "VALUE_NOT_REMOVABLE");
+        coreProbe.recordStartupProbe(tempDir);
+
+        List<String> lines = Files.readAllLines(accountability.logPath(tempDir));
+
+        assertIterableEquals(
+                List.of(
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-runtime-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-runtime-2\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-runtime-3\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\",\"seam\":\"fabric_core\",\"code\":\"VALUE_NOT_REMOVABLE\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-runtime-4\",\"recordType\":\"CER\",\"stage\":\"fabric_core_approved\",\"seam\":\"fabric_core\"}"),
+                lines);
+        assertFalse(lines.get(0).contains("fabric_runtime"));
+        assertFalse(lines.get(1).contains("fabric_runtime"));
+        assertFalse(lines.get(2).contains("fabric_runtime"));
+        assertFalse(lines.get(3).contains("fabric_runtime"));
+        assertFalse(lines.get(0).contains("\"seam\""));
+        assertFalse(lines.get(1).contains("\"seam\""));
+        assertFalse(lines.get(2).contains("\"seam\":\"fabric_runtime\""));
+        assertFalse(lines.get(3).contains("\"seam\":\"fabric_runtime\""));
     }
 
     private static org.coffer.core.arbitration.ArbitrationResult approvedArbitration(
