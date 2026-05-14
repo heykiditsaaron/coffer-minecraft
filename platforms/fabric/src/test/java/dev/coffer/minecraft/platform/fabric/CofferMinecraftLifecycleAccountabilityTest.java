@@ -63,6 +63,7 @@ class CofferMinecraftLifecycleAccountabilityTest {
         assertTrue(line.indexOf("\"recordType\"") < line.indexOf("\"stage\""));
         assertFalse(line.contains("\"code\""));
         assertFalse(line.contains("\"runtime\":"));
+        assertFalse(line.contains("fabric_mutation"));
         assertFalse(line.contains("\"timeline\":"));
         assertFalse(line.contains("\"explanation\""));
         assertFalse(line.contains(":null"));
@@ -86,6 +87,7 @@ class CofferMinecraftLifecycleAccountabilityTest {
                         "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-2\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}"),
                 lines);
         assertFalse(lines.get(1).contains("\"runtime\":"));
+        assertFalse(lines.get(1).contains("fabric_mutation"));
         assertFalse(lines.get(1).contains("\"timeline\":"));
         assertFalse(lines.get(1).contains("\"explanation\""));
     }

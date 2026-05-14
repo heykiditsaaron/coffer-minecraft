@@ -56,6 +56,7 @@ class CofferMinecraftFabricRuntimeContactProbeTest {
         assertFalse(lines.get(2).contains("\"inventory\""));
         assertFalse(lines.get(0).contains("\"seam\""));
         assertFalse(lines.get(1).contains("\"seam\":\"fabric_runtime\""));
+        assertFalse(lines.get(1).contains("fabric_mutation"));
         assertFalse(lines.get(1).contains("\"code\""));
     }
 
@@ -82,7 +83,9 @@ class CofferMinecraftFabricRuntimeContactProbeTest {
                         "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-runtime-2\",\"recordType\":\"CER\",\"stage\":\"fabric_runtime_unknown\",\"seam\":\"fabric_runtime\",\"code\":\"MALFORMED_RUNTIME_DESCRIPTOR\"}"),
                 lines);
         assertFalse(lines.get(0).contains("fabric_runtime"));
+        assertFalse(lines.get(0).contains("fabric_mutation"));
         assertFalse(lines.get(1).contains("fabric_core"));
+        assertFalse(lines.get(1).contains("fabric_mutation"));
     }
 
     @Test
@@ -113,7 +116,9 @@ class CofferMinecraftFabricRuntimeContactProbeTest {
         assertFalse(lines.get(0).contains("fabric_runtime"));
         assertFalse(lines.get(1).contains("fabric_runtime"));
         assertFalse(lines.get(2).contains("fabric_runtime"));
+        assertFalse(lines.get(2).contains("fabric_mutation"));
         assertFalse(lines.get(3).contains("fabric_runtime"));
+        assertFalse(lines.get(3).contains("fabric_mutation"));
         assertFalse(lines.get(0).contains("\"seam\""));
         assertFalse(lines.get(1).contains("\"seam\""));
         assertFalse(lines.get(2).contains("\"seam\":\"fabric_runtime\""));
