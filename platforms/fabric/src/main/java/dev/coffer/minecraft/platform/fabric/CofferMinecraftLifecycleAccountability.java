@@ -13,6 +13,7 @@ import java.util.function.LongSupplier;
 
 final class CofferMinecraftLifecycleAccountability {
     private static final String FILE_NAME = "fabric-lifecycle.jsonl";
+    private static final String FABRIC_CORE_SEAM = "fabric_core";
     private final Supplier<String> interactionIdFactory;
     private final LongSupplier timestampFactory;
 
@@ -32,23 +33,23 @@ final class CofferMinecraftLifecycleAccountability {
     }
 
     void recordServerStarted(Path runDirectory) {
-        append(runDirectory, "SER", "fabric_server_started", null);
+        append(runDirectory, "SER", "fabric_server_started", null, null);
     }
 
     void recordServerStopped(Path runDirectory) {
-        append(runDirectory, "SER", "fabric_server_stopped", null);
+        append(runDirectory, "SER", "fabric_server_stopped", null, null);
     }
 
     void recordConstructionRefused(Path runDirectory, String code) {
-        append(runDirectory, "SER", "fabric_construction_refused", code);
+        append(runDirectory, "SER", "fabric_construction_refused", null, code);
     }
 
     void recordCoreDenied(Path runDirectory, String code) {
-        append(runDirectory, "CER", "fabric_core_denied", code);
+        append(runDirectory, "CER", "fabric_core_denied", FABRIC_CORE_SEAM, code);
     }
 
     void recordCoreApproved(Path runDirectory) {
-        append(runDirectory, "CER", "fabric_core_approved", null);
+        append(runDirectory, "CER", "fabric_core_approved", FABRIC_CORE_SEAM, null);
     }
 
     Path logPath(Path runDirectory) {
@@ -57,26 +58,30 @@ final class CofferMinecraftLifecycleAccountability {
     }
 
     String toJsonLine(String interactionId, String stage) {
-        return toJsonLine(timestampFactory.getAsLong(), interactionId, "SER", stage, null);
+        return toJsonLine(timestampFactory.getAsLong(), interactionId, "SER", stage, null, null);
     }
 
     String toJsonLine(String interactionId, String stage, String code) {
-        return toJsonLine(timestampFactory.getAsLong(), interactionId, "SER", stage, code);
+        return toJsonLine(timestampFactory.getAsLong(), interactionId, "SER", stage, null, code);
     }
 
     String toJsonLine(long timestamp, String interactionId, String stage) {
-        return toJsonLine(timestamp, interactionId, "SER", stage, null);
+        return toJsonLine(timestamp, interactionId, "SER", stage, null, null);
     }
 
     String toJsonLine(long timestamp, String interactionId, String stage, String code) {
-        return toJsonLine(timestamp, interactionId, "SER", stage, code);
+        return toJsonLine(timestamp, interactionId, "SER", stage, null, code);
     }
 
     String toJsonLine(String interactionId, String recordType, String stage, String code) {
-        return toJsonLine(timestampFactory.getAsLong(), interactionId, recordType, stage, code);
+        return toJsonLine(timestampFactory.getAsLong(), interactionId, recordType, stage, null, code);
     }
 
     String toJsonLine(long timestamp, String interactionId, String recordType, String stage, String code) {
+        return toJsonLine(timestamp, interactionId, recordType, stage, null, code);
+    }
+
+    String toJsonLine(long timestamp, String interactionId, String recordType, String stage, String seam, String code) {
         Objects.requireNonNull(interactionId, "interactionId");
         Objects.requireNonNull(recordType, "recordType");
         Objects.requireNonNull(stage, "stage");
@@ -90,6 +95,9 @@ final class CofferMinecraftLifecycleAccountability {
                 .append("\",\"stage\":\"")
                 .append(escape(stage))
                 .append("\"");
+        if (seam != null) {
+            json.append(",\"seam\":\"").append(escape(seam)).append("\"");
+        }
         if (code != null) {
             json.append(",\"code\":\"").append(escape(code)).append("\"");
         }
@@ -97,13 +105,13 @@ final class CofferMinecraftLifecycleAccountability {
         return json.toString();
     }
 
-    private void append(Path runDirectory, String recordType, String stage, String code) {
+    private void append(Path runDirectory, String recordType, String stage, String seam, String code) {
         Path target = logPath(runDirectory);
         try {
             Files.createDirectories(Objects.requireNonNull(target.getParent(), "target parent"));
             Files.writeString(
                     target,
-                    toJsonLine(timestampFactory.getAsLong(), interactionIdFactory.get(), recordType, stage, code)
+                    toJsonLine(timestampFactory.getAsLong(), interactionIdFactory.get(), recordType, stage, seam, code)
                             + System.lineSeparator(),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,

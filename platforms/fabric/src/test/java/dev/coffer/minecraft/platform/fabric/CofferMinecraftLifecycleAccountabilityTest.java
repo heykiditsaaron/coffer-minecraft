@@ -89,4 +89,32 @@ class CofferMinecraftLifecycleAccountabilityTest {
         assertFalse(lines.get(1).contains("\"timeline\":"));
         assertFalse(lines.get(1).contains("\"explanation\""));
     }
+
+    @Test
+    void coreCerSeamAppearsOnlyWhenCoreBoundaryParticipates() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
+        CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
+                () -> "lifecycle-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
+
+        accountability.recordServerStarted(tempDir);
+        accountability.recordCoreDenied(tempDir, "VALUE_NOT_REMOVABLE");
+        accountability.recordCoreApproved(tempDir);
+
+        List<String> lines = Files.readAllLines(accountability.logPath(tempDir));
+
+        assertEquals(
+                "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
+                lines.get(0));
+        assertEquals(
+                "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\",\"seam\":\"fabric_core\",\"code\":\"VALUE_NOT_REMOVABLE\"}",
+                lines.get(1));
+        assertEquals(
+                "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-3\",\"recordType\":\"CER\",\"stage\":\"fabric_core_approved\",\"seam\":\"fabric_core\"}",
+                lines.get(2));
+        assertFalse(lines.get(0).contains("\"seam\""));
+        assertTrue(lines.get(1).indexOf("\"stage\"") < lines.get(1).indexOf("\"seam\""));
+        assertTrue(lines.get(1).indexOf("\"seam\"") < lines.get(1).indexOf("\"code\""));
+        assertTrue(lines.get(2).indexOf("\"stage\"") < lines.get(2).indexOf("\"seam\""));
+    }
 }

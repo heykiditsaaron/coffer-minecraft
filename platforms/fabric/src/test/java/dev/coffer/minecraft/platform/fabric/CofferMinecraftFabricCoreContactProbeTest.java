@@ -45,8 +45,10 @@ class CofferMinecraftFabricCoreContactProbeTest {
         assertIterableEquals(
                 List.of(
                         "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_server_started\"}",
-                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\"}"),
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\",\"seam\":\"fabric_core\"}"),
                 lines);
+        assertFalse(lines.get(1).contains("\"code\""));
+        assertFalse(lines.get(1).contains(":null"));
         assertFalse(lines.get(1).contains("\"runtime\":"));
         assertFalse(lines.get(1).contains("\"execution\":"));
         assertFalse(lines.get(1).contains("\"mutation\":"));
@@ -67,7 +69,7 @@ class CofferMinecraftFabricCoreContactProbeTest {
         assertIterableEquals(
                 List.of(
                         "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-1\",\"recordType\":\"SER\",\"stage\":\"fabric_construction_refused\",\"code\":\"MISSING_BINDING_ID\"}",
-                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\"}"),
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"fabric-core-contact-2\",\"recordType\":\"CER\",\"stage\":\"fabric_core_denied\",\"seam\":\"fabric_core\"}"),
                 lines);
     }
 
