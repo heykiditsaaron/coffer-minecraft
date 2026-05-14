@@ -49,9 +49,10 @@ Why this currently appears correct:
 
 - none identified as a separate refusal class at this time
 
-The `fabric_runtime` result remains a non-success contact result rather than a
-refusal classification. It is still a useful boundary marker, but it does not
-currently behave like a refusal in the same sense as the mutation deferral.
+The `fabric_runtime` result remains a non-success boundary contact result
+rather than a refusal classification. It is still a useful boundary marker, but
+it does not currently behave like a refusal in the same sense as the mutation
+deferral.
 
 ## Best-Fit Interpretation
 

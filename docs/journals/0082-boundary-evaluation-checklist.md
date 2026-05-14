@@ -11,8 +11,8 @@ expansion.
 
 Before adding any future seam or earned detail, ask:
 
-1. Did contact actually occur?
-2. Which boundary participated?
+1. Did contact actually occur, or is this only an interpretation?
+2. Which boundary participated, if any?
 3. Is the boundary Coffer-intrinsic or container-imposed?
 4. Is the content earned, or merely convenient to write?
 5. Does omission remain lawful?
@@ -29,7 +29,7 @@ Apply this checklist before:
 - changing what counts as earned content
 
 The checklist is intended to keep future work honest about whether a boundary
-was actually reached or merely inferred.
+was actually reached or merely inferred from symptoms.
 
 ## Rationale
 

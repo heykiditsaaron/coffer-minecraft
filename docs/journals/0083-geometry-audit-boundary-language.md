@@ -32,13 +32,13 @@ doctrinal rewrite.
 ## What May Need Later Wording Clarification
 
 - "Contact" vs "interpretation" still benefits from explicit reminders that
-  not every observed result is a boundary contact.
+  not every observed result should be read as boundary contact.
 - "Participation" vs "outcome" may need more precision when a boundary is
   reached but returns a non-success result.
 - "Absence" vs "omission-as-content" may need careful wording so missing fields
   are not mistaken for accidental silence.
 - "Evidence" vs "explanation" may need explicit separation in future journals
-  that discuss why a boundary behaved the way it did.
+  that report what happened versus why it may have happened.
 
 ## Future Pressure Points
 
