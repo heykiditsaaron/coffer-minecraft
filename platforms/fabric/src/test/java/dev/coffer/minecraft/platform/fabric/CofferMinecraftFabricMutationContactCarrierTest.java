@@ -37,6 +37,14 @@ class CofferMinecraftFabricMutationContactCarrierTest {
     }
 
     @Test
+    void contactedCarrierStillRefusesToClaimMutationSuccess() {
+        InertMutationContactCarrier contacted = new InertMutationContactCarrier(MutationBoundaryContact.CONTACTED);
+
+        assertTrue(contacted.hasMutationBoundaryContact());
+        assertFalse(contacted.claimsMutationSuccess());
+    }
+
+    @Test
     void currentAccountabilityRecordsStillDoNotEmitMutationSeam() throws IOException {
         CofferMinecraftLifecycleAccountability accountability =
                 new CofferMinecraftLifecycleAccountability(() -> "carrier-test", () -> TIMESTAMP);
