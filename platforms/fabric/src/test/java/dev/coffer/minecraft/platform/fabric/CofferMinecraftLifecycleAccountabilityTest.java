@@ -119,4 +119,32 @@ class CofferMinecraftLifecycleAccountabilityTest {
         assertTrue(lines.get(1).indexOf("\"seam\"") < lines.get(1).indexOf("\"code\""));
         assertTrue(lines.get(2).indexOf("\"stage\"") < lines.get(2).indexOf("\"seam\""));
     }
+
+    @Test
+    void runtimeCerVariantsRemainFlatOrderedAndTruthful() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
+        CofferMinecraftLifecycleAccountability accountability = new CofferMinecraftLifecycleAccountability(
+                () -> "lifecycle-" + counter.incrementAndGet(),
+                () -> TIMESTAMP);
+
+        accountability.recordCoreApproved(tempDir);
+        accountability.recordRuntimeSucceeded(tempDir);
+        accountability.recordRuntimeFailed(tempDir, "VALUE_NOT_REMOVABLE");
+        accountability.recordRuntimeUnknown(tempDir, "MALFORMED_RUNTIME_DESCRIPTOR");
+
+        List<String> lines = Files.readAllLines(accountability.logPath(tempDir));
+
+        assertIterableEquals(
+                List.of(
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-1\",\"recordType\":\"CER\",\"stage\":\"fabric_core_approved\",\"seam\":\"fabric_core\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-2\",\"recordType\":\"CER\",\"stage\":\"fabric_runtime_succeeded\",\"seam\":\"fabric_runtime\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-3\",\"recordType\":\"CER\",\"stage\":\"fabric_runtime_failed\",\"seam\":\"fabric_runtime\",\"code\":\"VALUE_NOT_REMOVABLE\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"lifecycle-4\",\"recordType\":\"CER\",\"stage\":\"fabric_runtime_unknown\",\"seam\":\"fabric_runtime\",\"code\":\"MALFORMED_RUNTIME_DESCRIPTOR\"}"),
+                lines);
+        assertFalse(lines.get(0).contains("\"code\""));
+        assertFalse(lines.get(1).contains("\"code\""));
+        assertTrue(lines.get(2).indexOf("\"stage\"") < lines.get(2).indexOf("\"seam\""));
+        assertTrue(lines.get(2).indexOf("\"seam\"") < lines.get(2).indexOf("\"code\""));
+        assertTrue(lines.stream().noneMatch(line -> line.contains("fabric_mutation")));
+    }
 }

@@ -57,6 +57,14 @@ final class CofferMinecraftLifecycleAccountability {
         append(runDirectory, "CER", "fabric_runtime_unknown", FABRIC_RUNTIME_SEAM, code);
     }
 
+    void recordRuntimeSucceeded(Path runDirectory) {
+        append(runDirectory, "CER", "fabric_runtime_succeeded", FABRIC_RUNTIME_SEAM, null);
+    }
+
+    void recordRuntimeFailed(Path runDirectory, String code) {
+        append(runDirectory, "CER", "fabric_runtime_failed", FABRIC_RUNTIME_SEAM, code);
+    }
+
     Path logPath(Path runDirectory) {
         Objects.requireNonNull(runDirectory, "runDirectory");
         return runDirectory.resolve("logs").resolve("coffer").resolve(FILE_NAME);
