@@ -75,6 +75,45 @@ class CofferMinecraftSelectedExchangeRequestAssemblyTest {
     }
 
     @Test
+    void assemblyDoesNotCarrySelectedSlotBoundaryIntoCoreFacingActorOrValueShape() {
+        CofferMinecraftSelectedExchangeRequestAssembly assembly =
+                new CofferMinecraftSelectedExchangeRequestAssembly(
+                        TransferableValueExchangePayloadConstruction::constructAtomicSwap);
+
+        CofferMinecraftSelectedExchangeRequestAssembly.AssemblyResult.Prepared prepared =
+                assertInstanceOf(
+                        CofferMinecraftSelectedExchangeRequestAssembly.AssemblyResult.Prepared.class,
+                        assembly.assemble(
+                                participant(
+                                        new ActorRef("player:" + FIRST_PLAYER_ID + ":inventory:hotbar"),
+                                        "offer-first",
+                                        capturedSnapshot(
+                                                FIRST_PLAYER_ID,
+                                                2,
+                                                "minecraft:iron_sword",
+                                                1,
+                                                "{Enchantments:[{id:\"minecraft:sharpness\",lvl:3s}],Damage:5}")),
+                                participant(
+                                        new ActorRef("player:" + SECOND_PLAYER_ID + ":inventory:hotbar"),
+                                        "offer-second",
+                                        capturedSnapshot(
+                                                SECOND_PLAYER_ID,
+                                                4,
+                                                "minecraft:shield",
+                                                1,
+                                                "{BlockEntityTag:{Base:11}}")),
+                                "minecraft-inventory"));
+
+        Map<String, Object> firstValueDescriptor = prepared.construction().firstValues().get(0).descriptor().values();
+
+        assertEquals("player:" + FIRST_PLAYER_ID + ":inventory:hotbar",
+                prepared.construction().firstActor().actorRef().value());
+        assertFalse(prepared.construction().firstActor().actorRef().value().contains(":slot:"));
+        assertFalse(firstValueDescriptor.containsKey("selectionKind"));
+        assertFalse(firstValueDescriptor.containsKey("selectedSlot"));
+    }
+
+    @Test
     void emptySelectedCaptureIsRefusedBeforeCoreFacingPayloadConstruction() {
         AtomicInteger constructionCalls = new AtomicInteger();
         CofferMinecraftSelectedExchangeRequestAssembly assembly =
