@@ -123,7 +123,55 @@ class CofferMinecraftSelectedInventoryAuthorityHandoffProofTest {
         assertTrue(createdDescriptor.nbtPayload().isEmpty());
     }
 
+    @Test
+    void selectedOfferPreparationPreservesEquivalenceDefiningNbtWithoutRequiringSlotPersistence() {
+        MinecraftDescriptorFactory factory = new MinecraftDescriptorFactory();
+        String swordNbt = "{Enchantments:[{id:\"minecraft:sharpness\",lvl:3s}],Damage:5}";
+        CofferMinecraftSelectedInventoryCapture.SelectedInventoryCaptureResult.Captured captured =
+                assertInstanceOf(
+                        CofferMinecraftSelectedInventoryCapture.SelectedInventoryCaptureResult.Captured.class,
+                        CofferMinecraftSelectedInventoryCapture.capture(
+                                PLAYER_ID,
+                                2,
+                                List.of(
+                                        observed("minecraft:dirt", 1),
+                                        CofferMinecraftSelectedInventoryCapture.ObservedStack.empty(),
+                                        observed("minecraft:iron_sword", 1, swordNbt),
+                                        CofferMinecraftSelectedInventoryCapture.ObservedStack.empty(),
+                                        CofferMinecraftSelectedInventoryCapture.ObservedStack.empty(),
+                                        CofferMinecraftSelectedInventoryCapture.ObservedStack.empty(),
+                                        CofferMinecraftSelectedInventoryCapture.ObservedStack.empty(),
+                                        CofferMinecraftSelectedInventoryCapture.ObservedStack.empty(),
+                                        CofferMinecraftSelectedInventoryCapture.ObservedStack.empty()),
+                                observed("minecraft:iron_sword", 1, swordNbt)));
+
+        MinecraftItemDescriptor selectedValue = captured.snapshot().selectedValue().orElseThrow();
+        Optional<org.coffer.firstparty.authority.transferablevalue.port.TransferableValueDescriptor> created =
+                factory.create(
+                        new ValueDeclaration(
+                                new ValueRef("selected-sword"),
+                                org.coffer.firstparty.authority.transferablevalue.core.TransferableValueCoreAuthority.AUTHORITY_ID,
+                                new OpaqueObject(Map.of(
+                                        MinecraftDescriptorFactory.ITEM_ID, selectedValue.itemId(),
+                                        MinecraftDescriptorFactory.QUANTITY, selectedValue.quantity(),
+                                        MinecraftDescriptorFactory.NBT_PAYLOAD, selectedValue.nbtPayload().orElseThrow(),
+                                        "selectionKind", captured.snapshot().boundary().selectionKind(),
+                                        "selectedSlot", captured.snapshot().boundary().slotIndex()))),
+                        "minecraft-inventory");
+
+        MinecraftItemDescriptor createdDescriptor =
+                assertInstanceOf(MinecraftItemDescriptor.class, created.orElseThrow());
+        assertEquals("minecraft:iron_sword", createdDescriptor.itemId());
+        assertEquals(1, createdDescriptor.quantity());
+        assertEquals(swordNbt, createdDescriptor.nbtPayload().orElseThrow());
+        assertEquals(2, captured.snapshot().boundary().slotIndex());
+    }
+
     private static CofferMinecraftSelectedInventoryCapture.ObservedStack observed(String itemId, int count) {
         return new CofferMinecraftSelectedInventoryCapture.ObservedStack(itemId, count, Optional.empty());
+    }
+
+    private static CofferMinecraftSelectedInventoryCapture.ObservedStack observed(String itemId, int count, String nbt) {
+        return new CofferMinecraftSelectedInventoryCapture.ObservedStack(itemId, count, Optional.of(nbt));
     }
 }

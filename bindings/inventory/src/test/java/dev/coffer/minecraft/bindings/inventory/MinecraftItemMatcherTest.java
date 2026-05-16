@@ -84,6 +84,26 @@ class MinecraftItemMatcherTest {
     }
 
     @Test
+    void enchantmentDifferenceDoesNotMatch() throws CommandSyntaxException {
+        ItemStack stack = stackWithNbt(Items.IRON_SWORD, "{Enchantments:[{id:\"minecraft:sharpness\",lvl:3s}]}");
+        MinecraftItemDescriptor descriptor = new MinecraftItemDescriptor(
+                "minecraft:iron_sword",
+                1,
+                Optional.of("{Enchantments:[{id:\"minecraft:smite\",lvl:3s}]}"));
+
+        assertFalse(MinecraftItemMatcher.matches(stack, descriptor));
+    }
+
+    @Test
+    void durabilityDifferenceDoesNotMatch() throws CommandSyntaxException {
+        ItemStack stack = stackWithNbt(Items.IRON_SWORD, "{Damage:5}");
+        MinecraftItemDescriptor descriptor =
+                new MinecraftItemDescriptor("minecraft:iron_sword", 1, Optional.of("{Damage:1}"));
+
+        assertFalse(MinecraftItemMatcher.matches(stack, descriptor));
+    }
+
+    @Test
     void quantityDifferenceDoesNotAffectIdentityMatch() {
         ItemStack stack = new ItemStack(Items.STONE, 64);
         MinecraftItemDescriptor descriptor =
