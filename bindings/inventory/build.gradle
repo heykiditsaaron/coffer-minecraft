@@ -16,6 +16,7 @@ dependencies {
     implementation "${coffer_group}:coffer-core:${coffer_version}"
     implementation "${coffer_group}:coffer-runtime:${coffer_version}"
     implementation "${coffer_group}:coffer-transferable-value-authority:${coffer_version}"
+    testImplementation project(path: ':platforms:fabric', configuration: 'namedElements')
 
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
