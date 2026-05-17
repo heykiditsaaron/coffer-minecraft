@@ -3,12 +3,14 @@ package dev.coffer.minecraft.bindings.inventory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.Bootstrap;
@@ -103,6 +105,45 @@ class MinecraftSelectedExchangeCoreAuthorityTruthTest {
     }
 
     @Test
+    void authoredSelectedValueRemovedBeforeSubmissionDeniesCoreArbitrationWithoutMutation() {
+        List<ItemStack> firstHotbar = mutableSlots(
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY);
+        List<ItemStack> secondHotbar = mutableSlots(
+                new ItemStack(Items.SHIELD, 1),
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY);
+
+        ArbitrationResult arbitration = arbitrate(
+                exchangePayload(
+                        value("selected-first-value", "minecraft:iron_sword", 1,
+                                "{Enchantments:[{id:\"minecraft:sharpness\",lvl:3s}],Damage:5}"),
+                        value("selected-second-value", "minecraft:shield", 1, null)),
+                resolver(firstHotbar, secondHotbar));
+
+        assertEquals(Decision.DENIED, arbitration.outcome().decision());
+        assertNull(arbitration.mutationPlan());
+        assertEquals(
+                MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE,
+                arbitration.outcome().reasons().get(0).detail().values().get("reasonCode"));
+        assertTrue(firstHotbar.stream().allMatch(ItemStack::isEmpty));
+        assertEquals(1, secondHotbar.get(0).getCount());
+    }
+
+    @Test
     void missingEquivalentOwnedValueDeniesCoreArbitration() {
         List<ItemStack> firstHotbar = mutableSlots(
                 ItemStack.EMPTY,
@@ -138,6 +179,47 @@ class MinecraftSelectedExchangeCoreAuthorityTruthTest {
                 MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE,
                 arbitration.outcome().reasons().get(0).detail().values().get("reasonCode"));
         assertEquals(1, firstHotbar.get(4).getCount());
+        assertEquals(1, secondHotbar.get(0).getCount());
+    }
+
+    @Test
+    void materiallyChangedSelectedValueBeforeSubmissionDeniesCoreArbitration() throws CommandSyntaxException {
+        List<ItemStack> firstHotbar = mutableSlots(
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                stackWithNbt(Items.IRON_SWORD, "{Damage:1}"),
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY);
+        List<ItemStack> secondHotbar = mutableSlots(
+                new ItemStack(Items.SHIELD, 1),
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
+                ItemStack.EMPTY);
+
+        ArbitrationResult arbitration = arbitrate(
+                exchangePayload(
+                        value("selected-first-value", "minecraft:iron_sword", 1,
+                                "{Enchantments:[{id:\"minecraft:sharpness\",lvl:3s}],Damage:5}"),
+                        value("selected-second-value", "minecraft:shield", 1, null)),
+                resolver(firstHotbar, secondHotbar));
+
+        assertEquals(Decision.DENIED, arbitration.outcome().decision());
+        assertNull(arbitration.mutationPlan());
+        assertEquals(
+                MinecraftPlayerInventoryContainer.VALUE_NOT_REMOVABLE,
+                arbitration.outcome().reasons().get(0).detail().values().get("reasonCode"));
+        assertEquals(
+                "{Damage:1}",
+                Objects.requireNonNull(firstHotbar.get(4).getNbt(), "hotbar nbt").toString());
         assertEquals(1, secondHotbar.get(0).getCount());
     }
 
