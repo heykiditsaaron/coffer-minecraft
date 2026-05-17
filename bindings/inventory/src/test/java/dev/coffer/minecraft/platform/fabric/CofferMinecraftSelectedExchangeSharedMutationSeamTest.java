@@ -249,6 +249,73 @@ class CofferMinecraftSelectedExchangeSharedMutationSeamTest {
         assertTrue(lines.stream().noneMatch(line -> line.contains("fabric_runtime_succeeded")));
     }
 
+    @Test
+    void postApprovalCapacityDriftStillCompletesConsistentlyForSingleSelectedValues() throws IOException {
+        List<ItemStack> firstHotbar = mutableSlots(new ItemStack(Items.STONE, 64), ItemStack.EMPTY);
+        List<ItemStack> secondSimulationHotbar = mutableSlots(new ItemStack(Items.DIRT, 64), ItemStack.EMPTY);
+        List<ItemStack> secondMutationHotbar = mutableSlots(new ItemStack(Items.DIRT, 64));
+        AtomicBoolean runtimePhase = new AtomicBoolean(false);
+        AtomicInteger runtimeResolutions = new AtomicInteger();
+        Harness harness = harness(
+                firstHotbar,
+                secondMutationHotbar,
+                (playerId, region) -> {
+                    if (region != MinecraftPlayerInventoryContainer.Region.HOTBAR) {
+                        return Optional.empty();
+                    }
+                    if (FIRST_PLAYER_ID.equals(playerId)) {
+                        return Optional.of(firstHotbar);
+                    }
+                    if (SECOND_PLAYER_ID.equals(playerId)) {
+                        if (!runtimePhase.get()) {
+                            return Optional.of(secondSimulationHotbar);
+                        }
+                        return Optional.of(runtimeResolutions.getAndIncrement() == 0
+                                ? secondSimulationHotbar
+                                : secondMutationHotbar);
+                    }
+                    return Optional.empty();
+                });
+        CofferMinecraftLifecycleAccountability accountability = accountability();
+        CofferMinecraftSelectedExchangeSubmissionChain chain = chain(
+                harness,
+                accountability,
+                tempDir,
+                mutationPlan -> {
+                    runtimePhase.set(true);
+                    return execute(harness, mutationPlan);
+                });
+        CofferMinecraftSelectedExchangeConfirmation.ExchangeState state = state(64, 64);
+
+        CofferMinecraftSelectedExchangeSubmissionChain.SubmissionResult.Submitted submitted =
+                assertInstanceOf(
+                        CofferMinecraftSelectedExchangeSubmissionChain.SubmissionResult.Submitted.class,
+                        chain.submit(tempDir, state, confirmedLedger(state)));
+
+        CofferMinecraftSelectedExchangeRuntimeParticipation.ParticipationResult.RuntimeParticipated runtime =
+                assertInstanceOf(
+                        CofferMinecraftSelectedExchangeRuntimeParticipation.ParticipationResult.RuntimeParticipated.class,
+                        submitted.participation());
+
+        assertEquals(Decision.APPROVED, runtime.arbitration().outcome().decision());
+        assertNotNull(runtime.arbitration().mutationPlan());
+        assertEquals(ExecutionStatus.FULL_SUCCESS, runtime.execution().status());
+        assertEquals(MutationExecutionStatus.MUTATION_SUCCEEDED, runtime.execution().mutationResults().get(0).status());
+        assertEquals(Items.DIRT, firstHotbar.get(0).getItem());
+        assertEquals(64, firstHotbar.get(0).getCount());
+        assertTrue(firstHotbar.get(1).isEmpty());
+        assertEquals(Items.STONE, secondMutationHotbar.get(0).getItem());
+        assertEquals(64, secondMutationHotbar.get(0).getCount());
+
+        List<String> lines = Files.readAllLines(accountability.logPath(tempDir));
+        assertEquals(
+                List.of(
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"selected-shared-seam-1\",\"recordType\":\"CER\",\"stage\":\"fabric_core_approved\",\"seam\":\"fabric_core\"}",
+                        "{\"timestamp\":1700000000000,\"interactionId\":\"selected-shared-seam-2\",\"recordType\":\"CER\",\"stage\":\"fabric_runtime_succeeded\",\"seam\":\"fabric_runtime\"}"),
+                lines);
+    }
+
+
     private static CofferMinecraftSelectedExchangeSubmissionChain chain(
             Harness harness,
             CofferMinecraftLifecycleAccountability accountability,
@@ -324,6 +391,7 @@ class CofferMinecraftSelectedExchangeSharedMutationSeamTest {
                 participant(SECOND_PLAYER_ID, "offer-second", 0, "minecraft:dirt", secondQuantity),
                 "minecraft-inventory");
     }
+
 
     private static CofferMinecraftSelectedExchangeConfirmation.ConfirmationLedger confirmedLedger(
             CofferMinecraftSelectedExchangeConfirmation.ExchangeState state) {
